@@ -1,0 +1,46 @@
+.month-view-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.month-view-button {
+  margin: 0 0.5rem;
+}
+
+.month-view-table-container {
+  margin-top: 1rem;
+}
+
+.sortable-header {
+  cursor: pointer;
+}
+
+.wage-value {
+  color: green;
+}
+
+.expense-value {
+  color: red;
+}
+
+.centered-cell {
+  text-align: center;
+}
+
+.total-row {
+  font-weight: bold;
+}
+
+.add-new-row-cell {
+  cursor: pointer;
+  textAlign: center;
+  /* display: flex;
+  justify-content: center;
+  align-items: center; */
+}
+
+.add-new-row-cell:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}

@@ -1,31 +1,49 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { useState, useEffect } from "react";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
+
 import { IconButton } from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import AddIcon from "@mui/icons-material/Add";
+
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
+
+import DialogNewEntry from "./DialogNewEntry";
+import MonthYearSelector from "./MonthYearSelector";
+
+import Paper from "@mui/material/Paper";
+import Table from "@mui/material/Table";
+import TableContainer from "@mui/material/TableContainer";
+import TableBody from "@mui/material/TableBody";
+import TableHead from "@mui/material/TableHead";
+import TableRowHeader from "./TableRowHeader";
+import TableRowEntry from "./TableRowEntry";
+import TableRowTotal from "./TableRowTotal";
+import TableRowButton from "./TableRowButton";
+
+import "./MonthView.css";
+
+const headers = [
+  {
+    id: "code",
+    numeric: true,
+    disablePadding: true,
+    label: "Code",
+  },
+  {
+    id: "desc",
+    numeric: false,
+    disablePadding: false,
+    label: "Description",
+  },
+  {
+    id: "value",
+    numeric: true,
+    disablePadding: false,
+    label: "Value",
+  },
+];
 
 const MonthView = ({ selectedMonth, selectedYear }) => {
   const [data, setData] = useState([]);
-  const [newRowData, setNewRowData] = useState({ description: "", value: 0 });
   const [dateLimits, setDateLimits] = useState({});
   const [currMonth, setCurrMonth] = useState(selectedMonth);
   const [currYear, setCurrYear] = useState(selectedYear);
@@ -40,9 +58,10 @@ const MonthView = ({ selectedMonth, selectedYear }) => {
       }
 
       const data = await response.json();
-      setData(data);
+      return data;
     } catch (error) {
       console.error("Error fetching data:", error);
+      return [];
     }
   };
 
@@ -54,9 +73,7 @@ const MonthView = ({ selectedMonth, selectedYear }) => {
       }
 
       const dateLimits = await response.json();
-      setDateLimits(dateLimits);
-
-      console.log(dateLimits);
+      return dateLimits;
     } catch (error) {
       console.error("Error fetching date limits:", error);
       return null;
@@ -64,11 +81,11 @@ const MonthView = ({ selectedMonth, selectedYear }) => {
   };
 
   useEffect(() => {
-    fetchData(currMonth, currYear);
+    fetchData(currMonth, currYear).then((data) => setData(data));
   }, [currMonth, currYear]);
 
   useEffect(() => {
-    fetchDateLimits();
+    fetchDateLimits().then((data) => setDateLimits(data));
   }, []);
 
   const total = data
@@ -81,68 +98,25 @@ const MonthView = ({ selectedMonth, selectedYear }) => {
     }, 0)
     .toFixed(2);
 
-  const getNextMonthYear = () => {
-    if (currMonth === 12) {
-      return [1, currYear + 1];
-    } else {
-      return [currMonth + 1, currYear];
-    }
-  };
-  const getPreviousMonthYear = () => {
-    if (currMonth === 1) {
-      return [12, currYear - 1];
-    } else {
-      return [currMonth - 1, currYear];
-    }
-  };
-  const checkDateLimits = (month, year) => {
-    return !(
-      year < dateLimits.minYear ||
-      (year === dateLimits.minYear && month < dateLimits.minMonth) ||
-      year > dateLimits.maxYear ||
-      (year === dateLimits.maxYear && month > dateLimits.maxMonth)
-    );
-  };
-
-  const handleMonthChange = (isNext) => {
-    let [newMonth, newYear] = isNext
-      ? getNextMonthYear()
-      : getPreviousMonthYear();
-
-    if (!checkDateLimits(newMonth, newYear)) {
-      return;
-    }
-
-    if (
-      (currMonth === newMonth && currYear === newYear) ||
-      newMonth === undefined ||
-      newYear === undefined
-    ) {
-      return;
-    }
-
+  const onMonthChange = (newMonth, newYear) => {
     setCurrMonth(newMonth);
     setCurrYear(newYear);
     setData([]);
   };
 
-  const [showValues, setShowValues] = useState(true);
-
-  const toggleShowValues = () => {
-    setShowValues(!showValues);
-  };
-
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [hidden, setHidden] = useState(false);
+  
+  const [sortConfig, setSortConfig] = useState({ id: null, order: "asc" });
 
   const sortedData = React.useMemo(() => {
     let sortableData = [...data];
-    if (sortConfig.key !== null) {
+    if (sortConfig.id !== null) {
       sortableData.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? -1 : 1;
+        if (a[sortConfig.id] < b[sortConfig.id]) {
+          return sortConfig.order === "asc" ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? 1 : -1;
+        if (a[sortConfig.id] > b[sortConfig.id]) {
+          return sortConfig.order === "asc" ? 1 : -1;
         }
         return 0;
       });
@@ -150,210 +124,78 @@ const MonthView = ({ selectedMonth, selectedYear }) => {
     return sortableData;
   }, [data, sortConfig]);
 
-  const requestSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
+  const requestSort = (event, id) => {
+    let order = "asc";
+    if (sortConfig.id === id && sortConfig.order === "asc") {
+      order = "desc";
     }
-    setSortConfig({ key, direction });
+    setSortConfig({ id, order });
   };
 
-  const [open, setOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleNewItemDialogOpen = () => {
-    setOpen(true);
-  };
-
-  const handleNewItemDialogClose = (add) => {
-    if (add) {
+  const handleNewItemDialogClose = (newRowData) => {
+    if (newRowData !== undefined) {
       const newRow = { ...newRowData };
       newRow.is_wage = newRow.value >= 0;
       newRow.value = Math.abs(newRow.value);
       setData([...data, newRow]);
-    } 
+    }
 
-    setOpen(false);
+    setDialogOpen(false);
   };
 
   return (
     <div>
-      <IconButton onClick={toggleShowValues}>
-        {showValues ? <VisibilityOffIcon /> : <VisibilityIcon />}
-      </IconButton>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "center",
+      <IconButton
+        onClick={() => {
+          setHidden(!hidden);
         }}
       >
-        <IconButton
-          onClick={() => handleMonthChange(false)}
-          disabled={
-            currMonth === dateLimits.minMonth && currYear === dateLimits.minYear
-          }
-          style={{ margin: "8px" }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
+        {hidden ? <VisibilityOffIcon /> : <VisibilityIcon />}
+      </IconButton>
 
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DatePicker
-            views={["year", "month"]}
-            label="Year and Month"
-            minDate={new Date(dateLimits.minYear, dateLimits.minMonth - 1)}
-            maxDate={new Date(dateLimits.maxYear, dateLimits.maxMonth - 1)}
-            value={new Date(currYear, currMonth - 1)}
-            onChange={(newValue) => {
-              const newYear = newValue.getFullYear();
-              const newMonth = newValue.getMonth() + 1;
-              setCurrMonth(newMonth);
-              setCurrYear(newYear);
-              setData([]);
-            }}
-          />
-        </LocalizationProvider>
+      <MonthYearSelector
+        onMonthChange={onMonthChange}
+        currMonth={currMonth}
+        currYear={currYear}
+        dateLimits={dateLimits}
+      />
 
-        <IconButton
-          onClick={() => handleMonthChange(true)}
-          disabled={
-            currMonth === dateLimits.maxMonth && currYear === dateLimits.maxYear
-          }
-          style={{ margin: "8px" }}
-        >
-          <ArrowForwardIcon />
-        </IconButton>
-      </div>
-      <TableContainer
-        component={Paper}
-        style={{ width: "80vw", margin: "0 auto" }}
-      >
+      <TableContainer component={Paper}>
         <Table>
           <TableHead>
-            <TableRow>
-              <TableCell
-                style={{
-                  width: "50px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
-                onClick={() => requestSort("code")}
-              >
-                Code
-                {sortConfig.key === "code" &&
-                  (sortConfig.direction === "asc" ? " ▲" : " ▼")}
-              </TableCell>
-              <TableCell
-                style={{
-                  width: "200px",
-                  fontWeight: "bold",
-                }}
-                onClick={() => requestSort("description")}
-              >
-                Description
-                {sortConfig.key === "description" &&
-                  (sortConfig.direction === "asc" ? " ▲" : " ▼")}
-              </TableCell>
-              <TableCell
-                style={{
-                  width: "100px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
-                onClick={() => requestSort("value")}
-              >
-                Value
-                {sortConfig.key === "value" &&
-                  (sortConfig.direction === "asc" ? " ▲" : " ▼")}
-              </TableCell>
-            </TableRow>
+            <TableRowHeader
+              headers={headers}
+              onRequestSort={requestSort}
+              sortConfig={sortConfig}
+            />
           </TableHead>
+
           <TableBody>
             {sortedData.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell>{row.code}</TableCell>
-                <TableCell>{row.description}</TableCell>
-                <TableCell>
-                  <span
-                    style={{
-                      color: row.is_wage ? "green" : "red",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {showValues ? "R$ " + row.value?.toFixed(2) : "R$ ****"}
-                  </span>
-                </TableCell>
-              </TableRow>
+              <TableRowEntry
+                key={row.description}
+                entry={row}
+                hidden={hidden}
+              />
             ))}
-            <TableRow>
-              <TableCell colSpan={3} style={{ textAlign: "center" }}>
-                <IconButton onClick={handleNewItemDialogOpen}>
-                  <AddIcon />
-                </IconButton>
-              </TableCell>
-            </TableRow>
-            <TableRow style={{ borderTop: "2px solid black" }}>
-              <TableCell colSpan={2}>Total</TableCell>
-              <TableCell>
-                <span
-                  style={{
-                    color: total >= 0 ? "green" : "red",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {showValues ? "R$ " + total : "R$ ****"}
-                </span>
-              </TableCell>
-            </TableRow>
+
+            <TableRowButton
+              onRoeClick={() => {
+                setDialogOpen(true);
+              }}
+            />
+
+            <TableRowTotal total={total} hidden={hidden} />
           </TableBody>
         </Table>
       </TableContainer>
 
-      <Dialog open={open} onClose={handleNewItemDialogClose}>
-        <DialogTitle>Add New Entry</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Description"
-            type="text"
-            fullWidth
-            onChange={(e) => {
-              newRowData.description = e.target.value;
-              setNewRowData({ ...newRowData });
-            }}
-          />
-          <TextField
-            margin="dense"
-            label="Value"
-            type="number"
-            fullWidth
-            onChange={(e) => {
-              newRowData.value = parseFloat(e.target.value);
-              setNewRowData({ ...newRowData });
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              handleNewItemDialogClose(false);
-            }}
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              handleNewItemDialogClose(true);
-            }}
-            color="primary"
-          >
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DialogNewEntry
+        open={dialogOpen}
+        onDialogClose={handleNewItemDialogClose}
+      />
     </div>
   );
 };
