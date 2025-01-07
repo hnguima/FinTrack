@@ -1,6 +1,7 @@
-import React from 'react';
-import PropTypes from 'prop-types';
-import IconButton from '@mui/material/IconButton';
+import React from "react";
+import PropTypes from "prop-types";
+import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
@@ -53,17 +54,28 @@ const MonthYearSelector = ({
     }
 
     onMonthChange(newMonth, newYear);
-
   };
 
   return (
-    <div className="month-view-controls">
+    <Box
+      sx={{
+        py: 1,
+        mt: 1,
+        width: "fit-content",
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "center",
+        alignContent: "center",
+      }}
+    >
       <IconButton
         onClick={() => handleMonthChange(false)}
         disabled={
           currMonth === dateLimits.minMonth && currYear === dateLimits.minYear
         }
-        className="month-view-button"
+        sx={{
+          m: 1,
+        }}
       >
         <ArrowBackIcon />
       </IconButton>
@@ -71,7 +83,7 @@ const MonthYearSelector = ({
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
           views={["year", "month"]}
-          label="Year and Month"
+          // label="Year and Month"
           minDate={new Date(dateLimits.minYear, dateLimits.minMonth - 1)}
           maxDate={new Date(dateLimits.maxYear, dateLimits.maxMonth - 1)}
           value={new Date(currYear, currMonth - 1)}
@@ -88,11 +100,13 @@ const MonthYearSelector = ({
         disabled={
           currMonth === dateLimits.maxMonth && currYear === dateLimits.maxYear
         }
-        className="month-view-button"
+        sx={{
+          m: 1,
+        }}
       >
         <ArrowForwardIcon />
       </IconButton>
-    </div>
+    </Box>
   );
 };
 

@@ -2,26 +2,23 @@ import React from "react";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import PropTypes from "prop-types";
-import { ValueDisplay } from "./Displays";
+import { SumDisplay } from "./Displays";
 
-const TableRowTotal = ({ total, hidden }) => {
+const TableRowTotal = ({ rows, hidden }) => {
   return (
-    <TableRow>
-      <TableCell colSpan={2}>Total</TableCell>
-      <TableCell>
-        <ValueDisplay
-          value={total}
-          hidden={hidden}
-          prefix={"R$"}
-          state={total >= 0}
-        />
+    <TableRow sx={{ borderTop: "2px solid #919191FF" }}>
+      <TableCell colSpan={2}>
+        Total
+      </TableCell>
+      <TableCell align="right">
+        <SumDisplay dataToSum={rows} hidden={hidden} prefix="R$" />
       </TableCell>
     </TableRow>
   );
 };
 
 TableRowTotal.propTypes = {
-  total: PropTypes.number.isRequired,
+  rows: PropTypes.object.isRequired,
   hidden: PropTypes.bool.isRequired,
 };
 

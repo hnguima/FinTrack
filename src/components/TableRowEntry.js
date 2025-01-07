@@ -9,12 +9,12 @@ const TableRowEntry = ({ entry, hidden }) => {
     <TableRow key={entry.id}>
       <TableCell>{entry.code}</TableCell>
       <TableCell>{entry.description}</TableCell>
-      <TableCell>
+      <TableCell align="right">
         <ValueDisplay
-          value={entry.value}
+          value={Math.abs(entry.value).toFixed(2)}
           hidden={hidden}
           prefix={"R$"}
-          state={entry.is_wage}
+          state={entry.value > 0}
         />
       </TableCell>
     </TableRow>
