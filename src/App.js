@@ -2,7 +2,7 @@ import "./App.css";
 import MonthView from "./components/MonthView";
 
 import React, { useState } from "react";
-import { Fab, Menu, MenuItem } from "@mui/material";
+import { Container, Fab, Menu, MenuItem } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 
@@ -31,7 +31,9 @@ function App() {
   return (
     <div className="App">
       <ThemeProvider theme={theme}>
-        <MonthView selectedMonth={7} selectedYear={2023} />
+        <Container sx={{ py: 1 }} >
+          <MonthView selectedMonth={7} selectedYear={2023} style={{}} />
+        </Container>
         <Fab
           color="primary"
           aria-label="add"
