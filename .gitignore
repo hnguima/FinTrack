@@ -26,3 +26,5 @@ yarn-error.log*
 # user ignores
 /server/node_modules
 /server/venv
+/server/src/dbopts.json
+/server/src/serveropts.json
