@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 
-import { IconButton } from "@mui/material";
+import { Box, IconButton } from "@mui/material";
 
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
@@ -14,122 +14,92 @@ import Table from "@mui/material/Table";
 import TableContainer from "@mui/material/TableContainer";
 import TableBody from "@mui/material/TableBody";
 import TableHead from "@mui/material/TableHead";
+import TableCell from "@mui/material/TableCell";
+import TableRow from "@mui/material/TableRow";
+import Skeleton from "@mui/material/Skeleton";
+
 import TableRowHeader from "./TableRowHeader";
-import TableRowEntry from "./TableRowEntry";
 import TableRowTotal from "./TableRowTotal";
 import TableRowButton from "./TableRowButton";
 
-import "./MonthView.css";
+import TableRowGroup from "./TableRowGroup";
+
+import { fetchEntries, fetchDateLimits } from "./ServerHelpers/FetchAPI";
 
 const headers = [
   {
     id: "code",
     numeric: true,
-    disablePadding: true,
+    width: "10%",
     label: "Code",
   },
   {
-    id: "desc",
+    id: "description",
     numeric: false,
-    disablePadding: false,
+    width: "60%",
     label: "Description",
   },
   {
     id: "value",
     numeric: true,
-    disablePadding: false,
+    width: "30%",
+    align: "right",
     label: "Value",
   },
 ];
 
 const MonthView = ({ selectedMonth, selectedYear }) => {
-  const [data, setData] = useState([]);
+  const [entries, setEntries] = useState([]);
   const [dateLimits, setDateLimits] = useState({});
   const [currMonth, setCurrMonth] = useState(selectedMonth);
   const [currYear, setCurrYear] = useState(selectedYear);
-
-  const fetchData = async (month, year) => {
-    try {
-      const response = await fetch(
-        `http://localhost:3001/entries?month=${month}&year=${year}`
-      );
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      return [];
-    }
-  };
-
-  const fetchDateLimits = async () => {
-    try {
-      const response = await fetch(`http://localhost:3001/datelimits`);
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const dateLimits = await response.json();
-      return dateLimits;
-    } catch (error) {
-      console.error("Error fetching date limits:", error);
-      return null;
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData(currMonth, currYear).then((data) => setData(data));
+    console.time("loading time");
+    setLoading(true);
+
+    fetchEntries(currMonth, currYear).then((data) => {
+      setEntries(data);
+      console.timeEnd("loading time");
+      setLoading(false);
+    });
   }, [currMonth, currYear]);
 
   useEffect(() => {
     fetchDateLimits().then((data) => setDateLimits(data));
   }, []);
 
-  const total = data
-    .reduce((acc, row) => {
-      if (row.is_wage) {
-        return acc + row.value;
-      } else {
-        return acc - row.value;
-      }
-    }, 0)
-    .toFixed(2);
-
   const onMonthChange = (newMonth, newYear) => {
     setCurrMonth(newMonth);
     setCurrYear(newYear);
-    setData([]);
+    setEntries([]);
   };
 
   const [hidden, setHidden] = useState(false);
-  
-  const [sortConfig, setSortConfig] = useState({ id: null, order: "asc" });
 
-  const sortedData = React.useMemo(() => {
-    let sortableData = [...data];
-    if (sortConfig.id !== null) {
-      sortableData.sort((a, b) => {
-        if (a[sortConfig.id] < b[sortConfig.id]) {
-          return sortConfig.order === "asc" ? -1 : 1;
+  const [sortState, setSortState] = useState({ id: null, order: "asc" });
+
+  const sortedData = React.useMemo(
+    () =>
+      [...entries].sort((a, b) => {
+        if (a[sortState.id] < b[sortState.id]) {
+          return sortState.order === "asc" ? -1 : 1;
         }
-        if (a[sortConfig.id] > b[sortConfig.id]) {
-          return sortConfig.order === "asc" ? 1 : -1;
+        if (a[sortState.id] > b[sortState.id]) {
+          return sortState.order === "asc" ? 1 : -1;
         }
         return 0;
-      });
-    }
-    return sortableData;
-  }, [data, sortConfig]);
+      }),
+    [entries, sortState]
+  );
 
   const requestSort = (event, id) => {
     let order = "asc";
-    if (sortConfig.id === id && sortConfig.order === "asc") {
+    if (sortState.id === id && sortState.order === "asc") {
       order = "desc";
     }
-    setSortConfig({ id, order });
+    setSortState({ id, order });
   };
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -139,55 +109,91 @@ const MonthView = ({ selectedMonth, selectedYear }) => {
       const newRow = { ...newRowData };
       newRow.is_wage = newRow.value >= 0;
       newRow.value = Math.abs(newRow.value);
-      setData([...data, newRow]);
+      setEntries([...entries, newRow]);
     }
 
     setDialogOpen(false);
   };
 
+  const groupedData = React.useMemo(() => {
+    return sortedData.reduce((acc, row) => {
+      const group = row.entryGroup || "Ungrouped";
+      if (!acc[group]) acc[group] = [];
+      acc[group].push(row);
+      return acc;
+    }, {});
+  }, [sortedData]);
+
   return (
-    <div>
-      <IconButton
-        onClick={() => {
-          setHidden(!hidden);
-        }}
-      >
-        {hidden ? <VisibilityOffIcon /> : <VisibilityIcon />}
-      </IconButton>
+    <Paper elevation={5} sx={{ maxWidth: "500px", margin: "auto" }}>
+      <Box sx={{ pt: 1, px: 1 }}>
+        <MonthYearSelector
+          onMonthChange={onMonthChange}
+          currMonth={currMonth}
+          currYear={currYear}
+          dateLimits={dateLimits}
+        />
+      </Box>
 
-      <MonthYearSelector
-        onMonthChange={onMonthChange}
-        currMonth={currMonth}
-        currYear={currYear}
-        dateLimits={dateLimits}
-      />
+      <TableContainer component={Box} sx={{ position: "relative" }}>
+        <IconButton
+          onClick={() => {
+            setHidden(!hidden);
+          }}
+          sx={{
+            position: "absolute",
+            top: 0,
+            right: 64,
+            m: 2,
+            p: 0,
+          }}
+        >
+          {hidden ? <VisibilityOffIcon /> : <VisibilityIcon />}
+        </IconButton>
 
-      <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRowHeader
               headers={headers}
               onRequestSort={requestSort}
-              sortConfig={sortConfig}
+              sortState={sortState}
             />
           </TableHead>
 
           <TableBody>
-            {sortedData.map((row) => (
-              <TableRowEntry
-                key={row.description}
-                entry={row}
-                hidden={hidden}
-              />
-            ))}
+            {loading ? (
+              <TableRow>
+                {headers.map((item) => {
+                  return (
+                    <TableCell key={item.id}>
+                      <Skeleton height={24} />
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ) : (
+              Object.entries(groupedData).map(([group, rows]) => {
+                console.log(group, rows);
+                return (
+                  <TableRowGroup
+                    key={group}
+                    group={group}
+                    rows={rows}
+                    headers={headers}
+                    hidden={hidden}
+                    loading={loading}
+                  />
+                );
+              })
+            )}
 
             <TableRowButton
-              onRoeClick={() => {
+              onRowClick={() => {
                 setDialogOpen(true);
               }}
             />
 
-            <TableRowTotal total={total} hidden={hidden} />
+            <TableRowTotal rows={entries} hidden={hidden} />
           </TableBody>
         </Table>
       </TableContainer>
@@ -196,7 +202,7 @@ const MonthView = ({ selectedMonth, selectedYear }) => {
         open={dialogOpen}
         onDialogClose={handleNewItemDialogClose}
       />
-    </div>
+    </Paper>
   );
 };
 MonthView.propTypes = {
