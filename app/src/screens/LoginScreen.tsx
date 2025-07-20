@@ -47,11 +47,16 @@ const LoginScreen: React.FC = () => {
           }, 1000);
         }
       } else {
-        setError(result.error || "Authentication failed");
+        setError(
+          t("login_auth_failed", {
+            defaultValue: result.error || "Authentication failed",
+          })
+        );
         setIsLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to initiate login. Please try again.");
+      const fallbackMsg = typeof err?.message === "string" ? err.message : "Failed to initiate login. Please try again.";
+      setError(t("login_error", { defaultValue: fallbackMsg }));
       setIsLoading(false);
     }
   };

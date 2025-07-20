@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 
-from core.db_manager import get_db_connection, get_user_by_username, get_user_keypair, generate_user_keypair, USER_DB_PATH
+from core.db_manager import get_user_db_connection, get_user_by_username, get_user_keypair, generate_user_keypair
 from core.oauth import get_current_user_info
 
 # Error constants
@@ -88,25 +88,25 @@ def verify_jwt_token(token, public_key_pem):
 def extract_user_from_token(token):
     """Extract and verify user ID from JWT token."""
     try:
-        # Get unverified payload to extract user_id
+        # Get unverified payload to extract username from sub claim
         unverified_payload = jwt.decode(token, options={"verify_signature": False})
-        user_id = unverified_payload.get('user_id')
+        username = unverified_payload.get('sub')
         
-        logging.info("[TOKEN] Verifying token for user: %s", user_id)
+        logging.info("[TOKEN] Verifying token for user: %s", username)
         
-        if not user_id:
+        if not username:
             raise TokenError('Invalid token format')
         
         # Get user's public key for verification
-        keypair = get_user_keypair(user_id)
+        keypair = get_user_keypair(username)
         if not keypair:
-            logging.error("[TOKEN] No keypair found for user: %s", user_id)
+            logging.error("[TOKEN] No keypair found for user: %s", username)
             raise TokenError(ERROR_USER_NOT_FOUND)
         
         # Verify token with user's public key
         payload = verify_jwt_token(token, keypair['public_key'])
-        logging.info("[TOKEN] Token verified successfully for user: %s", user_id)
-        return payload['user_id']
+        logging.info("[TOKEN] Token verified successfully for user: %s", username)
+        return payload['sub']
         
     except TokenError:
         raise
@@ -158,7 +158,7 @@ def token_required(f):
         if not token:
             logging.info("[AUTH] No Bearer token found, trying session-based auth")
             try:
-                user_info_result, error = get_current_user_info(lambda: get_db_connection(USER_DB_PATH))
+                user_info_result, error = get_current_user_info(lambda: get_user_db_connection())
                 if user_info_result and not error:
                     # Create temporary token for session-based user
                     username = user_info_result.get('username')

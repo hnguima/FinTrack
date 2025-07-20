@@ -5,7 +5,6 @@ from flask import Blueprint, request, jsonify, Response
 from werkzeug.utils import secure_filename
 import os
 import logging
-import time
 import json
 import base64
 
@@ -29,12 +28,30 @@ def create_auth_token():
             return jsonify({'message': 'Not authenticated'}), 401
         
         username = user_info_result.get('username')
-        token, token_error = create_token_for_user(username)
         
-        if token_error:
-            return jsonify({'message': token_error}), 404 if token_error == ERROR_USER_NOT_FOUND else 500
+        # Simple token generation to avoid circular import
+        try:
+            import jwt
+            from datetime import datetime, timedelta
             
-        return jsonify({'token': token}), 200
+            user_data = get_user_by_username(username)
+            
+            if user_data and user_data.get('private_key'):
+                # Create JWT token
+                payload = {
+                    'sub': username,
+                    'iat': datetime.utcnow(),
+                    'exp': datetime.utcnow() + timedelta(hours=24)
+                }
+                token = jwt.encode(payload, user_data['private_key'], algorithm='RS256')
+                return jsonify({'token': token}), 200
+            else:
+                logging.error("No keypair found for user: %s", username)
+                return jsonify({'message': 'User keypair not found'}), 500
+        except Exception as e:
+            logging.error("Error generating JWT token: %s", str(e))
+            return jsonify({'message': 'Error generating token'}), 500
+            
     except Exception as e:
         logging.error("Error creating token: %s", str(e))
         return jsonify({'message': ERROR_INTERNAL_SERVER}), 500
@@ -72,11 +89,10 @@ def get_user_profile(current_user_id):
     try:
         user = get_user_by_username(current_user_id)
         if user:
-            # Generate photo URL if user has photo BLOB - add timestamp for cache busting
+            # Generate photo URL if user has photo BLOB
             photo_url = None
             if user['photo']:
-                timestamp = int(time.time())
-                photo_url = f"https://fintrack-api.the-cube-lab.com/api/users/{current_user_id}/photo?t={timestamp}"
+                photo_url = f"https://fintrack-api.the-cube-lab.com/api/users/{current_user_id}/photo"
             
             user_data = {
                 'id': user['id'],
@@ -85,6 +101,7 @@ def get_user_profile(current_user_id):
                 'email': user['email'],
                 'photo': photo_url,
                 'created_at': user['created_at'],
+                'updated_at': user['updated_at'],
                 'preferences': json.loads(user['preferences']) if user['preferences'] else {}
             }
             return jsonify(user_data), 200
@@ -92,6 +109,23 @@ def get_user_profile(current_user_id):
             return jsonify({'message': ERROR_USER_NOT_FOUND}), 404
     except Exception as e:
         logging.error("Error fetching user profile: %s", str(e))
+        return jsonify({'message': ERROR_INTERNAL_SERVER}), 500
+
+@users_bp.route('/api/users/profile/timestamp', methods=['GET'])
+@token_required
+def get_user_profile_timestamp(current_user_id):
+    """Get current user's profile timestamp for cache validation."""
+    try:
+        user = get_user_by_username(current_user_id)
+        if user:
+            return jsonify({
+                'updated_at': user['updated_at'],
+                'created_at': user['created_at']
+            }), 200
+        else:
+            return jsonify({'message': ERROR_USER_NOT_FOUND}), 404
+    except Exception as e:
+        logging.error("Error fetching user profile timestamp: %s", str(e))
         return jsonify({'message': ERROR_INTERNAL_SERVER}), 500
 
 @users_bp.route('/api/users/profile', methods=['PUT'])
@@ -127,6 +161,9 @@ def update_user_profile(current_user_id):
         if not updates:
             return jsonify({'message': 'No valid fields to update'}), 400
         
+        # Add updated_at timestamp
+        updates.append("updated_at = CURRENT_TIMESTAMP")
+        
         # Add username for WHERE clause
         params.append(current_user_id)
         
@@ -147,11 +184,10 @@ def update_user_profile(current_user_id):
         conn.close()
         
         if updated_user:
-            # Generate photo URL if user has photo BLOB - add timestamp for cache busting
+            # Generate photo URL if user has photo BLOB
             photo_url = None
             if updated_user['photo']:
-                timestamp = int(time.time())
-                photo_url = f"https://fintrack-api.the-cube-lab.com/api/users/{current_user_id}/photo?t={timestamp}"
+                photo_url = f"https://fintrack-api.the-cube-lab.com/api/users/{current_user_id}/photo"
             
             user_data = {
                 'id': updated_user['id'],
@@ -209,10 +245,10 @@ def upload_profile_photo(current_user_id):
                 photo_bytes = file.read()
         
         if photo_bytes:
-            # Store photo BLOB directly in database
+            # Store photo BLOB directly in database and update timestamp
             conn = get_user_db_connection()
             cursor = conn.cursor()
-            cursor.execute("UPDATE users SET photo = ? WHERE username = ?", 
+            cursor.execute("UPDATE users SET photo = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?", 
                          (photo_bytes, current_user_id))
             conn.commit()
             conn.close()

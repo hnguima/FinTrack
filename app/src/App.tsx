@@ -15,9 +15,10 @@ import { StatusBar } from "@capacitor/status-bar";
 import { Capacitor } from "@capacitor/core";
 
 import { useTranslation } from "react-i18next";
-import ConfigScreen from "./screens/ConfigScreen";
 import UserProfileScreen from "./screens/UserProfileScreen";
-import { ApiClient } from "./utils/apiClient";
+import { UserCacheManager } from "./utils/userCacheManager";
+import { TokenManager, ApiClient } from "./utils/apiClient";
+import { BackgroundSync } from "./utils/backgroundSync";
 
 // Patch console methods globally to add prefix
 (function patchConsoleMethods() {
@@ -69,9 +70,79 @@ function getUserFromStorage() {
 
 function App() {
   const { t } = useTranslation();
-  const [screen, setScreen] = useState<"dashboard" | "config" | "profile">(
+  const [screen, setScreen] = useState<"dashboard" | "profile">(
     "dashboard"
   );
+
+  // Check if server data has been updated and sync local state
+  const checkAndSyncServerUpdates = async () => {
+    if (!user) return;
+    
+    try {
+      const updateStatus = await UserCacheManager.checkUserUpdateStatus();
+      if (updateStatus.shouldUpdate) {
+        console.log("[FinTrack] Server data updated from another source, refreshing...");
+        
+        // Fetch fresh data from server and update local state
+        const freshData = await UserCacheManager.getUserDataWithCache();
+        if (freshData) {
+          await updateUserFromServerData(freshData);
+        }
+      }
+    } catch (error) {
+      console.error("[FinTrack] Error checking for server updates:", error);
+    }
+  };
+
+  // Update local user state from server data if it changed
+  const updateUserFromServerData = async (freshData: any) => {
+    // Only update if data actually changed to prevent unnecessary re-renders
+    const currentUserStr = JSON.stringify(user);
+    const freshUserStr = JSON.stringify(freshData);
+    
+    if (currentUserStr !== freshUserStr) {
+      setUser(freshData);
+      localStorage.setItem("user", JSON.stringify(freshData));
+      
+      // Update app-level preferences if they changed
+      if (freshData.preferences) {
+        if (freshData.preferences.theme && freshData.preferences.theme !== themeMode) {
+          setThemeMode(freshData.preferences.theme);
+        }
+        if (freshData.preferences.language && freshData.preferences.language !== language) {
+          setLanguage(freshData.preferences.language);
+          i18n.changeLanguage(freshData.preferences.language);
+        }
+      }
+    }
+  };
+
+  // Wrapper function to trigger background sync when changing screens
+  const navigateToScreen = (newScreen: "dashboard" | "profile") => {
+    // Navigate immediately for seamless UX
+    setScreen(newScreen);
+    
+    // Run sync operations in background without blocking UI
+    performBackgroundSync();
+  };
+
+  // Perform sync operations in background after screen change
+  const performBackgroundSync = async () => {
+    try {
+      // First, sync any pending local changes to the database
+      const pendingCount = BackgroundSync.getPendingUpdateCount();
+      if (pendingCount > 0) {
+        console.log(`[FinTrack] Syncing ${pendingCount} pending update(s) to server...`);
+        await BackgroundSync.forceSyncNow();
+      }
+      
+      // Always check for external updates (from other devices, web interface, etc.)
+      // This is crucial for multi-device consistency
+      await checkAndSyncServerUpdates();
+    } catch (error) {
+      console.error("[FinTrack] Error during background sync:", error);
+    }
+  };
   const { themeMode, setThemeMode, theme, language, setLanguage } =
     usePersistentConfig();
   const changeLanguage = useChangeLanguage(setLanguage);
@@ -83,23 +154,34 @@ function App() {
     if (!user) return;
 
     try {
-      const response = await ApiClient.getUserProfile();
+      // Use UserCacheManager for intelligent caching
+      const cachedUserData = await UserCacheManager.getUserDataWithCache();
 
-      if (response.status === 200) {
-        const serverUser = response.data;
+      if (cachedUserData) {
+        // Only update user if the data has actually changed to prevent infinite loops
+        const currentUserStr = JSON.stringify(user);
+        const cachedUserStr = JSON.stringify(cachedUserData);
 
-        // Update user data
-        setUser(serverUser);
-        localStorage.setItem("user", JSON.stringify(serverUser));
+        if (currentUserStr !== cachedUserStr) {
+          // Update user data
+          setUser(cachedUserData);
+          localStorage.setItem("user", JSON.stringify(cachedUserData));
+        }
 
         // Sync preferences with local config if they exist and are different
-        if (serverUser.preferences) {
-          if (serverUser.preferences.theme !== themeMode) {
-            setThemeMode(serverUser.preferences.theme);
+        if (cachedUserData.preferences) {
+          if (
+            cachedUserData.preferences.theme &&
+            cachedUserData.preferences.theme !== themeMode
+          ) {
+            setThemeMode(cachedUserData.preferences.theme);
           }
-          if (serverUser.preferences.language !== language) {
-            setLanguage(serverUser.preferences.language);
-            i18n.changeLanguage(serverUser.preferences.language);
+          if (
+            cachedUserData.preferences.language &&
+            cachedUserData.preferences.language !== language
+          ) {
+            setLanguage(cachedUserData.preferences.language);
+            i18n.changeLanguage(cachedUserData.preferences.language);
           }
         }
       }
@@ -108,8 +190,39 @@ function App() {
     }
   };
 
+  // Request JWT token if user is authenticated but doesn't have one
+  const ensureJWTToken = async () => {
+    if (!user) return;
+
+    try {
+      // Check if we already have a token
+      const existingToken = TokenManager.getToken();
+      if (existingToken) {
+        console.log("[FinTrack] JWT token already exists");
+        return;
+      }
+
+      // Request token from server for authenticated users
+      console.log("[FinTrack] Requesting JWT token for authenticated user");
+      const response = await ApiClient.post("/api/auth/token", {});
+
+      if (response.status === 200 && response.data.token) {
+        TokenManager.setToken(response.data.token);
+        console.log("[FinTrack] JWT token obtained and stored");
+      } else {
+        console.warn("[FinTrack] Failed to get JWT token:", response.status);
+      }
+    } catch (error) {
+      console.error("[FinTrack] Error requesting JWT token:", error);
+    }
+  };
+
   const handleUserUpdate = (updatedUser: any) => {
     setUser(updatedUser);
+    
+    // Queue the user update for background sync to database
+    BackgroundSync.queueUserUpdate(updatedUser);
+    
     // Sync preferences if they changed
     if (updatedUser.preferences) {
       if (updatedUser.preferences.theme !== themeMode) {
@@ -126,6 +239,7 @@ function App() {
   useEffect(() => {
     if (user) {
       fetchUserPreferences();
+      ensureJWTToken();
     }
   }, [user?.username]); // Only re-run if username changes
 
@@ -230,22 +344,10 @@ function App() {
 
   const getScreenTitle = () => {
     if (screen === "dashboard") return t("title");
-    if (screen === "config") return t("config");
-    return t("userProfile");
   };
 
   const renderScreen = () => {
     if (screen === "dashboard") return <DashboardScreen />;
-    if (screen === "config") {
-      return (
-        <ConfigScreen
-          themeMode={themeMode}
-          setThemeMode={setThemeMode}
-          language={language}
-          setLanguage={changeLanguage}
-        />
-      );
-    }
     return (
       <UserProfileScreen
         themeMode={themeMode}
@@ -276,7 +378,7 @@ function App() {
       <Header
         title={getScreenTitle()}
         screen={screen}
-        setScreen={setScreen}
+        setScreen={navigateToScreen}
         user={user}
       />
       <Container

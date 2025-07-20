@@ -19,7 +19,7 @@ from flask_dance.consumer import oauth_authorized
 from requests_oauthlib import OAuth2Session
 
 # Import our custom modules
-from core.db_manager import get_db_connection, create_user
+from core.db_manager import get_user_db_connection, create_user, get_user_by_username
 
 # Default database path (for backward compatibility)
 
@@ -88,8 +88,7 @@ def setup_oauth_handlers(google_bp, get_db_connection_func):
                         password=None,
                         email=email,
                         provider=provider,
-                        name=name,
-                        db_path=db_path
+                        name=name
                     )
                     
                     # Update the newly created user with photo and preferences
@@ -309,8 +308,7 @@ def create_oauth_routes(app, google_bp):
                 raise ValueError("Failed to authorize with Google")
             
             # Get user info after successful OAuth
-            db_path = app.config.get('DB_PATH') or os.path.join(os.path.dirname(__file__), 'db', 'user.db')
-            user_info, error = get_current_user_info(lambda: get_db_connection(db_path), db_path)
+            user_info, error = get_current_user_info(lambda: get_user_db_connection())
             if error:
                 logging.error(f"[OAUTH] Error getting user info: {error}")
                 if target_redirect == 'mobile':
@@ -333,23 +331,26 @@ def create_oauth_routes(app, google_bp):
                 # Generate JWT token for mobile client
                 jwt_token = None
                 try:
-                    from db_manager import get_user_by_username
-                    from token_auth import create_jwt_token
+                    # Simple token generation to avoid circular import
+                    import jwt
+                    from datetime import datetime, timedelta
                     
                     username = user_info.get('username', '')
-                    user_data = get_user_by_username(username, db_path)
+                    user_data = get_user_by_username(username)
                     
                     if user_data and user_data.get('private_key'):
-                        jwt_token = create_jwt_token(
-                            user_data['private_key'],
-                            username,
-                            expires_hours=24
-                        )
-                        logging.info(f"[OAUTH] Generated JWT token for mobile user: {username}")
+                        # Create JWT token
+                        payload = {
+                            'sub': username,
+                            'iat': datetime.utcnow(),
+                            'exp': datetime.utcnow() + timedelta(hours=24)
+                        }
+                        jwt_token = jwt.encode(payload, user_data['private_key'], algorithm='RS256')
+                        logging.info("[OAUTH] Generated JWT token for mobile user: %s", username)
                     else:
-                        logging.error(f"[OAUTH] No keypair found for user: {username}")
+                        logging.error("[OAUTH] No keypair found for user: %s", username)
                 except Exception as e:
-                    logging.error(f"[OAUTH] Error generating JWT token: {e}")
+                    logging.error("[OAUTH] Error generating JWT token: %s", str(e))
                 
                 # Mobile redirect with deep link including JWT token
                 mobile_params = urllib.parse.urlencode({
@@ -429,9 +430,8 @@ def create_oauth_routes(app, google_bp):
                 """, 401
             
             # Get user info after successful OAuth
-            db_path = app.config.get('DB_PATH') or os.path.join(os.path.dirname(__file__), 'db', 'user.db')
-            user_info, error = get_current_user_info(lambda: get_db_connection(db_path), db_path)
-            
+            user_info, error = get_current_user_info(lambda: get_user_db_connection())
+
             if error:
                 return f"""
                 <html><body>
@@ -445,23 +445,26 @@ def create_oauth_routes(app, google_bp):
             # Generate JWT token for mobile client
             jwt_token = None
             try:
-                from db_manager import get_user_by_username
-                from token_auth import create_jwt_token
+                # Simple token generation to avoid circular import
+                import jwt
+                from datetime import datetime, timedelta
                 
                 username = user_info.get('username', '')
-                user_data = get_user_by_username(username, db_path)
+                user_data = get_user_by_username(username)
                 
                 if user_data and user_data.get('private_key'):
-                    jwt_token = create_jwt_token(
-                        user_data['private_key'],
-                        username,
-                        expires_hours=24
-                    )
-                    logging.info(f"[OAUTH] Generated JWT token for mobile user: {username}")
+                    # Create JWT token
+                    payload = {
+                        'sub': username,
+                        'iat': datetime.utcnow(),
+                        'exp': datetime.utcnow() + timedelta(hours=24)
+                    }
+                    jwt_token = jwt.encode(payload, user_data['private_key'], algorithm='RS256')
+                    logging.info("[OAUTH] Generated JWT token for mobile user: %s", username)
                 else:
-                    logging.error(f"[OAUTH] No keypair found for user: {username}")
+                    logging.error("[OAUTH] No keypair found for user: %s", username)
             except Exception as e:
-                logging.error(f"[OAUTH] Error generating JWT token: {e}")
+                logging.error("[OAUTH] Error generating JWT token: %s", str(e))
             
             # Encode user info as URL parameters including JWT token
             user_params = urllib.parse.urlencode({
@@ -545,8 +548,7 @@ def get_current_user_info(get_db_connection_func):
                     password=None,
                     email=email,
                     provider=provider,
-                    name=name,
-                    db_path=db_path
+                    name=name
                 )
                 
                 # Update the newly created user with photo and preferences

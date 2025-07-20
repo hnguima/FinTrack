@@ -13,5 +13,14 @@
   "fr": "French",
   "de": "German",
   "name": "Name",
-  "email": "Email"
+  "email": "Email",
+  "takePhoto": "Take Photo",
+  "selectFromPhotos": "Select from Photos",
+  "chooseFromGallery": "Choose from Gallery",
+  "dark": "Dark",
+  "light": "Light",
+  "login_title": "Sign in to FinTrack",
+  "login_subtitle": "Access your dashboard securely with Google.",
+  "login_with_google": "Sign in with Google",
+  "login_error": "An error occurred during login. Please try again."
 }

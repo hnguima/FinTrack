@@ -1,28 +1,24 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Switch,
-  Typography,
   Paper,
   Box,
-  Select,
-  MenuItem,
-  TextField,
-  Avatar,
-  IconButton,
   Alert,
   Snackbar,
-  Menu,
-  ListItemIcon,
-  ListItemText,
+  Typography,
+  TextField,
+  Switch,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
-import PersonIcon from "@mui/icons-material/Person";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Capacitor } from "@capacitor/core";
 import { ApiClient } from "../utils/apiClient";
+import { BackgroundSync } from "../utils/backgroundSync";
+import { UserCacheManager } from "../utils/userCacheManager";
+import { saveUserUpdatedAt } from "../capacitorPreferences";
+import ProfilePhoto from "../components/ProfilePhoto";
 
 interface UserProfileScreenProps {
   themeMode: "light" | "dark";
@@ -45,20 +41,9 @@ interface UserProfileScreenProps {
 
 const Pane = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
-  marginBottom: theme.spacing(3),
-  borderRadius: Number(theme.shape.borderRadius) * 2,
-  boxShadow: theme.shadows[2],
+  margin: theme.spacing(2, 0),
+  borderRadius: theme.shape.borderRadius,
 }));
-
-const PhotoUploadContainer = styled(Box)(({ theme }) => ({
-  position: "relative",
-  display: "inline-block",
-  marginBottom: theme.spacing(2),
-}));
-
-// const SafeArea = styled("div")({
-//   height: "env(safe-area-inset-top, 0px)",
-// });
 
 const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   themeMode,
@@ -71,13 +56,15 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   const { t } = useTranslation();
   const [editName, setEditName] = useState(user.name);
   const [isLoading, setIsLoading] = useState(false);
-  const [photoMenuAnchor, setPhotoMenuAnchor] = useState<null | HTMLElement>(
-    null
-  );
-  const [snackbar, setSnackbar] = useState({
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({
     open: false,
     message: "",
-    severity: "success" as "success" | "error",
+    severity: "success",
   });
 
   const handlePhotoUpload = async (
@@ -86,6 +73,10 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    await handlePhotoUploadFile(file);
+  };
+
+  const handlePhotoUploadFile = async (file: File) => {
     // Check file size (limit to 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setSnackbar({
@@ -96,26 +87,70 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
       return;
     }
 
-    setIsLoading(true);
+    setPhotoLoading(true);
     try {
+      // Create optimistic update - cache the photo immediately
+      const tempUrl = URL.createObjectURL(file);
+      const optimisticUser = { ...user, photo: tempUrl };
+      onUserUpdate(optimisticUser);
+      await UserCacheManager.updateCachedPhoto(tempUrl);
+
       const response = await ApiClient.uploadProfilePhoto(file);
 
       if (response.status === 200) {
-        // Refresh user profile to get updated photo
-        const profileResponse = await ApiClient.getUserProfile();
-        if (profileResponse.status === 200) {
-          onUserUpdate(profileResponse.data);
-          setSnackbar({
-            open: true,
-            message: "Photo uploaded successfully!",
-            severity: "success",
-          });
+        // Instead of fetching fresh profile (which loses unsaved changes),
+        // merge current user state with the new photo URL from upload response
+        const uploadResponseData = response.data;
+        
+        // Create updated user data by preserving local changes and adding new photo
+        const updatedUserWithPhoto = { 
+          ...user, // Start with current user (preserves unsaved changes like theme)
+          ...uploadResponseData, // Add server fields (id, created_at, etc.)
+          ...user, // Re-apply user data to override any server preferences with local ones
+          photo: uploadResponseData.photo || uploadResponseData.photoUrl, // Use new photo from server
+          updated_at: uploadResponseData.updated_at || uploadResponseData.created_at
+        };
+
+        // Update cache with the merged data
+        const serverTimestamp = updatedUserWithPhoto.updated_at;
+        await UserCacheManager.cacheUserData(updatedUserWithPhoto, serverTimestamp);
+        await saveUserUpdatedAt(serverTimestamp);
+
+        // Also ensure the photo BLOB is cached with the correct timestamp
+        const newPhotoUrl = updatedUserWithPhoto.photo;
+        if (newPhotoUrl && !newPhotoUrl.startsWith('blob:')) {
+          // If it's a server URL, cache it as BLOB
+          await UserCacheManager.fetchAndCachePhotoBlob(newPhotoUrl, serverTimestamp);
         }
+
+        // Get cached photo BLOB to replace server URL with BLOB
+        const cachedPhotoUrl = await UserCacheManager.getCachedPhotoDataUrl();
+        const finalUserData = {
+          ...updatedUserWithPhoto,
+          photo: cachedPhotoUrl || updatedUserWithPhoto.photo
+        };
+        
+        // Use the final data with BLOB photo
+        onUserUpdate(finalUserData);
+
+        // Clean up temporary URL
+        URL.revokeObjectURL(tempUrl);
+
+        // Sync any pending changes (like theme) that might have been queued
+        // while we were uploading the photo
+        await BackgroundSync.syncIfPending();
       } else {
         throw new Error(response.data.message || "Failed to upload photo");
       }
     } catch (error) {
       console.error("Photo upload error:", error);
+
+      // Revert optimistic update on error
+      const cachedData = await UserCacheManager.getUserDataWithCache();
+      if (cachedData) {
+        onUserUpdate(cachedData);
+      }
+
       setSnackbar({
         open: true,
         message:
@@ -123,13 +158,11 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
         severity: "error",
       });
     } finally {
-      setIsLoading(false);
+      setPhotoLoading(false);
     }
   };
 
   const handleCameraCapture = async () => {
-    setPhotoMenuAnchor(null);
-
     if (!Capacitor.isNativePlatform()) {
       setSnackbar({
         open: true,
@@ -139,42 +172,26 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
       return;
     }
 
-    setIsLoading(true);
+    setPhotoLoading(true);
     try {
       const image = await Camera.getPhoto({
         quality: 90,
-        allowEditing: false, // Disable editing to avoid external app prompts
+        allowEditing: false,
         resultType: CameraResultType.DataUrl,
         source: CameraSource.Camera,
-        width: 800, // Limit photo size for better performance
+        width: 800,
         height: 800,
-        correctOrientation: true, // Auto-rotate based on device orientation
+        correctOrientation: true,
       });
 
       if (image.dataUrl) {
-        // Convert data URL to File object
         const response = await fetch(image.dataUrl);
         const blob = await response.blob();
         const file = new File([blob], "camera_photo.jpg", {
           type: "image/jpeg",
         });
 
-        const uploadResponse = await ApiClient.uploadProfilePhoto(file);
-
-        if (uploadResponse.status === 200) {
-          // Refresh user profile to get updated photo
-          const profileResponse = await ApiClient.getUserProfile();
-          if (profileResponse.status === 200) {
-            onUserUpdate(profileResponse.data);
-            setSnackbar({
-              open: true,
-              message: "Photo captured and uploaded successfully!",
-              severity: "success",
-            });
-          }
-        } else {
-          throw new Error("Failed to upload photo");
-        }
+        await handlePhotoUploadFile(file);
       }
     } catch (error) {
       console.error("Camera capture error:", error);
@@ -196,120 +213,71 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
         message: errorMessage,
         severity: "error",
       });
-    } finally {
-      setIsLoading(false);
+      setPhotoLoading(false);
     }
   };
 
   const handlePhotosSelect = async () => {
-    setPhotoMenuAnchor(null);
-
     if (!Capacitor.isNativePlatform()) {
       // Fallback to file input for web
       handleGallerySelect();
       return;
     }
 
-    setIsLoading(true);
+    setPhotoLoading(true);
     try {
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
         resultType: CameraResultType.DataUrl,
-        source: CameraSource.Photos, // This gives access to camera + gallery picker
+        source: CameraSource.Photos,
         width: 800,
         height: 800,
         correctOrientation: true,
       });
 
       if (image.dataUrl) {
-        // Convert data URL to File object
         const response = await fetch(image.dataUrl);
         const blob = await response.blob();
         const file = new File([blob], "selected_photo.jpg", {
           type: "image/jpeg",
         });
 
-        const uploadResponse = await ApiClient.uploadProfilePhoto(file);
-
-        if (uploadResponse.status === 200) {
-          // Refresh user profile to get updated photo
-          const profileResponse = await ApiClient.getUserProfile();
-          if (profileResponse.status === 200) {
-            onUserUpdate(profileResponse.data);
-            setSnackbar({
-              open: true,
-              message: "Photo selected and uploaded successfully!",
-              severity: "success",
-            });
-          }
-        } else {
-          throw new Error("Failed to upload photo");
-        }
+        await handlePhotoUploadFile(file);
       }
     } catch (error) {
       console.error("Photo selection error:", error);
-      let errorMessage = "Failed to select photo";
-
-      if (error instanceof Error) {
-        if (error.message.includes("User cancelled")) {
-          errorMessage = "Photo selection cancelled";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
       setSnackbar({
         open: true,
-        message: errorMessage,
+        message: "Failed to select photo from gallery",
         severity: "error",
       });
     } finally {
-      setIsLoading(false);
+      setPhotoLoading(false);
     }
   };
 
   const handleGallerySelect = () => {
-    setPhotoMenuAnchor(null);
     // Trigger file input click
     document.getElementById("photo-file-input")?.click();
-  };
-
-  const handlePhotoMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    setPhotoMenuAnchor(event.currentTarget);
-  };
-
-  const handlePhotoMenuClose = () => {
-    setPhotoMenuAnchor(null);
   };
 
   const updateProfile = async (updates: any) => {
     setIsLoading(true);
     try {
-      const response = await ApiClient.updateUserProfile(updates);
-
-      if (response.status === 200) {
-        const updatedUser = response.data;
-        onUserUpdate(updatedUser);
-        setSnackbar({
-          open: true,
-          message: "Profile updated successfully!",
-          severity: "success",
-        });
-
-        // Update local storage
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-      } else {
-        throw new Error(response.data.message || "Failed to update profile");
-      }
+      // Merge updates with current user data
+      const updatedUser = { ...user, ...updates };
+      
+      // Update local state immediately for responsiveness
+      onUserUpdate(updatedUser);
+      
+      // Note: BackgroundSync queuing is handled by App.tsx handleUserUpdate()
+      // so we don't queue here to avoid duplicates
+      
+      // Update local storage with updated data
+      localStorage.setItem("user", JSON.stringify(updatedUser));
     } catch (error) {
-      console.error("Profile update error:", error);
-      setSnackbar({
-        open: true,
-        message:
-          error instanceof Error ? error.message : "Failed to update profile",
-        severity: "error",
-      });
+      console.error("Error queuing profile update:", error);
     } finally {
       setIsLoading(false);
     }
@@ -322,13 +290,13 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   };
 
   const handleThemeChange = async (newTheme: "light" | "dark") => {
-    setThemeMode(newTheme);
+    setThemeMode(newTheme); // Update App-level theme immediately
     const preferences = { ...user.preferences, theme: newTheme };
     await updateProfile({ preferences });
   };
 
   const handleLanguageChange = async (newLanguage: string) => {
-    setLanguage(newLanguage);
+    setLanguage(newLanguage); // Update App-level language immediately
     const preferences = { ...user.preferences, language: newLanguage };
     await updateProfile({ preferences });
   };
@@ -355,90 +323,23 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
             mb: 3,
           }}
         >
-          <PhotoUploadContainer>
-            <Avatar
-              src={user.photo}
-              alt={user.name}
-              sx={{ width: 100, height: 100 }}
-            >
-              {!user.photo && <PersonIcon sx={{ fontSize: 60 }} />}
-            </Avatar>
-            <IconButton
-              sx={{
-                position: "absolute",
-                bottom: 0,
-                right: 0,
-                backgroundColor: (theme) => theme.palette.primary.main,
-                color: (theme) => theme.palette.primary.contrastText,
-                "&:hover": {
-                  backgroundColor: (theme) => theme.palette.primary.dark,
-                },
-                width: 32,
-                height: 32,
-              }}
-              onClick={handlePhotoMenuClick}
-            >
-              <PhotoCameraIcon sx={{ fontSize: 16 }} />
-            </IconButton>
+          <ProfilePhoto
+            user={user}
+            size={100}
+            showEditButton={true}
+            isLoading={photoLoading}
+            onPhotoCapture={handleCameraCapture}
+            onPhotoSelect={handlePhotosSelect}
+          />
 
-            {/* Hidden file input for gallery selection */}
-            <input
-              id="photo-file-input"
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              style={{ display: "none" }}
-            />
-          </PhotoUploadContainer>
-
-          {/* Photo source selection menu */}
-          <Menu
-            anchorEl={photoMenuAnchor}
-            open={Boolean(photoMenuAnchor)}
-            onClose={handlePhotoMenuClose}
-            anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "center",
-            }}
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "center",
-            }}
-          >
-            {Capacitor.isNativePlatform() ? (
-              // Mobile options
-              <>
-                <MenuItem onClick={handleCameraCapture}>
-                  <ListItemIcon>
-                    <PhotoCameraIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>{t("takePhoto", "Take Photo")}</ListItemText>
-                </MenuItem>
-                <MenuItem onClick={handlePhotosSelect}>
-                  <ListItemIcon>
-                    <PhotoLibraryIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>
-                    {t("selectFromPhotos", "Select from Photos")}
-                  </ListItemText>
-                </MenuItem>
-              </>
-            ) : (
-              // Web option
-              <MenuItem onClick={handleGallerySelect}>
-                <ListItemIcon>
-                  <PhotoLibraryIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>
-                  {t("chooseFromGallery", "Choose from Gallery")}
-                </ListItemText>
-              </MenuItem>
-            )}
-          </Menu>
-
-          <Typography variant="body2" color="text.secondary">
-            {t("clickToChangePhoto")}
-          </Typography>
+          {/* Hidden file input for gallery selection */}
+          <input
+            id="photo-file-input"
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            style={{ display: "none" }}
+          />
         </Box>
 
         <Box sx={{ mb: 2 }}>
@@ -446,7 +347,9 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
             label={t("name")}
             fullWidth
             value={editName}
-            onChange={(e) => setEditName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEditName(e.target.value)
+            }
             onBlur={handleNameUpdate}
             disabled={isLoading}
             sx={{ mb: 2 }}
@@ -481,7 +384,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           </Typography>
           <Switch
             checked={themeMode === "dark"}
-            onChange={(e) =>
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleThemeChange(e.target.checked ? "dark" : "light")
             }
             color="primary"
@@ -507,7 +410,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           <Typography>{t("language")}</Typography>
           <Select
             value={language}
-            onChange={(e) => handleLanguageChange(e.target.value)}
+            onChange={(e: any) => handleLanguageChange(e.target.value)}
             size="small"
             sx={{ minWidth: 120 }}
             disabled={isLoading}

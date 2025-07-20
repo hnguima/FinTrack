@@ -110,7 +110,7 @@ def initialize_user_database(db_path=None):
         # Required columns for the current schema
         required_columns = [
             'id', 'username', 'password', 'email', 'provider', 
-            'name', 'photo', 'preferences', 'private_key', 'public_key', 'created_at'
+            'name', 'photo', 'preferences', 'private_key', 'public_key', 'created_at', 'updated_at'
         ]
         
         # Check if table needs to be created or updated
@@ -132,7 +132,8 @@ def initialize_user_database(db_path=None):
                     preferences TEXT,  -- JSON string for user preferences (theme, language, etc.)
                     private_key TEXT NOT NULL,  -- RSA private key for JWT signing
                     public_key TEXT NOT NULL,   -- RSA public key for JWT verification
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
             conn.commit()
@@ -160,6 +161,10 @@ def initialize_user_database(db_path=None):
             if 'name' not in columns:
                 conn.execute('ALTER TABLE users ADD COLUMN name TEXT')
                 logging.info("Added name column")
+            
+            if 'updated_at' not in columns:
+                conn.execute('ALTER TABLE users ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+                logging.info("Added updated_at column")
             
             conn.commit()
             logging.info("Users table schema updated successfully")
@@ -223,7 +228,7 @@ def get_user_by_username(username, db_path=None):
     with get_db_connection(db_path) as conn:
         user = conn.execute(
             '''SELECT id, username, email, provider, name, photo, preferences, 
-                      private_key, public_key, created_at 
+                      private_key, public_key, created_at, updated_at 
                FROM users WHERE username = ?''', 
             (username,)
         ).fetchone()

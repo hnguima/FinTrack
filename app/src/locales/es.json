@@ -11,5 +11,16 @@
   "pt": "Portugués",
   "es": "Español",
   "fr": "Francés",
-  "de": "Alemán"
+  "de": "Alemán",
+  "name": "Nombre",
+  "email": "Correo electrónico",
+  "takePhoto": "Tomar Foto",
+  "selectFromPhotos": "Seleccionar de Fotos",
+  "chooseFromGallery": "Elegir de la Galería",
+  "userProfile": "Perfil",
+  "personalInfo": "Información Personal",
+  "login_title": "Iniciar sesión en FinTrack",
+  "login_subtitle": "Accede a tu tablero de forma segura con Google.",
+  "login_with_google": "Iniciar sesión con Google",
+  "login_error": "Se ha producido un error durante el inicio de sesión. Por favor, inténtalo de nuevo."
 }

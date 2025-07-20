@@ -139,6 +139,10 @@ export class ApiClient {
     return this.get("/api/users/profile");
   }
 
+  static async getUserProfileTimestamp() {
+    return this.get("/api/users/profile/timestamp");
+  }
+
   static async updateUserProfile(updates: any) {
     return this.put("/api/users/profile", updates);
   }

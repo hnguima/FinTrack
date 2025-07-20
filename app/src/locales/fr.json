@@ -9,5 +9,18 @@
   "pt": "Portugais",
   "es": "Espagnol",
   "fr": "Français",
-  "de": "Allemand"
+  "de": "Allemand",
+  "name": "Nom",
+  "email": "E-mail",
+  "takePhoto": "Prendre une photo",
+  "selectFromPhotos": "Sélectionner depuis les photos",
+  "chooseFromGallery": "Choisir depuis la galerie",
+  "userProfile": "Profil",
+  "personalInfo": "Informations personnelles",
+  "dark": "Sombre",
+  "light": "Clair",
+  "login_title": "Se connecter à FinTrack",
+  "login_subtitle": "Accédez à votre tableau de bord en toute sécurité avec Google.",
+  "login_with_google": "Se connecter avec Google",
+  "login_error": "Une erreur s'est produite lors de la connexion. Veuillez réessayer."
 }

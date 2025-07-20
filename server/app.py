@@ -12,7 +12,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Import our modules
 from core.oauth import create_google_oauth_blueprint, setup_oauth_handlers, create_oauth_routes
-from core.db_manager import initialize_all_databases, get_db_connection, USER_DB_PATH
+from core.db_manager import initialize_all_databases, get_user_db_connection
 from api.users import users_bp
 from api.finance import finance_bp
 
@@ -69,7 +69,7 @@ def create_app():
     app.register_blueprint(google_blueprint, url_prefix='/auth')
 
     # Setup OAuth handlers and routes
-    setup_oauth_handlers(google_blueprint, lambda: get_db_connection(user_db_path))
+    setup_oauth_handlers(google_blueprint, lambda: get_user_db_connection())
     create_oauth_routes(app, google_blueprint)
 
     # Initialize databases
@@ -79,10 +79,6 @@ def create_app():
     app.register_blueprint(users_bp)
     app.register_blueprint(finance_bp)
     
-    # Upload folder configuration
-    upload_folder = os.path.join(os.path.dirname(__file__), 'uploads')
-    os.makedirs(upload_folder, exist_ok=True)
-    app.config['UPLOAD_FOLDER'] = upload_folder
 
     # Health check endpoints
     @app.route('/api/health', methods=['GET'])

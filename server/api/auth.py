@@ -7,14 +7,12 @@ import logging
 import json
 from flask import Blueprint, request, jsonify, session
 from core.oauth import get_current_user_info
-from core.database import get_db_connection, get_user_by_username, get_user_keypair
+from core.database import get_user_db_connection, get_user_by_username, get_user_keypair
 from core.crypto_utils import create_user_token, verify_user_token, KeypairError
 
 # Create blueprint
 auth_bp = Blueprint('auth', __name__)
 
-# Database path
-DB_PATH = os.environ.get('DB_PATH', 'db/user.db')
 
 # Error constants
 ERROR_USER_NOT_FOUND = 'User not found'
@@ -25,44 +23,45 @@ ERROR_TOKEN_INVALID = 'Token is invalid'
 def get_user_from_token(token):
     """Extract user ID and verify token."""
     try:
-        # Extract user_id without verification first (we need it to find the public key)
+        # Extract username from sub claim without verification first (we need it to find the public key)
         import jwt
         unverified_payload = jwt.decode(token, options={"verify_signature": False})
-        user_id = unverified_payload.get('user_id')
+        username = unverified_payload.get('sub')
         
-        logging.info(f"[AUTH] Token user_id: {user_id}")
+        logging.info("[AUTH] Token username: %s", username)
         
-        if not user_id:
+        if not username:
             return None, 'Invalid token format'
         
         # Get user's public key
-        keypair = get_user_keypair(DB_PATH, user_id)
+        keypair = get_user_keypair(username)
         if not keypair:
-            logging.error(f"[AUTH] No keypair found for user: {user_id}")
+            logging.error("[AUTH] No keypair found for user: %s", username)
             return None, ERROR_USER_NOT_FOUND
         
         # Now verify token with user's public key
         payload = verify_user_token(token, keypair['public_key'])
-        logging.info(f"[AUTH] Token verified successfully for user: {user_id}")
-        return payload['user_id'], None
+        logging.info("[AUTH] Token verified successfully for user: %s", username)
+        return payload['sub'], None
         
     except KeypairError as e:
-        logging.warning(f"[AUTH] Token verification failed (possibly due to keypair regeneration): {str(e)}")
-        return None, f'Token verification failed: {str(e)}'
+        logging.warning("[AUTH] Token verification failed (possibly due to keypair regeneration): %s", str(e))
+        return None, 'Token verification failed: %s' % str(e)
     except Exception as e:
-        logging.warning(f"[AUTH] Token verification error (possibly due to keypair regeneration): {str(e)}")
-        return None, 'Token verification failed'
+        logging.error("[AUTH] Token verification failed: %s", str(e))
+        return None, ERROR_TOKEN_INVALID
+
 
 @auth_bp.route('/api/auth/token', methods=['POST'])
 def create_token():
     """Create JWT token for authenticated user."""
     try:
-        user_info_result, error = get_current_user_info(lambda: get_db_connection(DB_PATH), DB_PATH)
+        user_info_result, error = get_current_user_info(lambda: get_user_db_connection())
         if not user_info_result or error:
             return jsonify({'message': 'Not authenticated'}), 401
         
         username = user_info_result.get('username')
-        user_data = get_user_by_username(DB_PATH, username)
+        user_data = get_user_by_username(username)
         
         if not user_data or not user_data.get('private_key'):
             return jsonify({'message': ERROR_USER_NOT_FOUND}), 404
@@ -105,12 +104,12 @@ def verify_token():
 def get_session_info():
     """Get session info and create token if session exists."""
     try:
-        user_info_result, error = get_current_user_info(lambda: get_db_connection(DB_PATH), DB_PATH)
+        user_info_result, error = get_current_user_info(lambda: get_user_db_connection(), )
         if not user_info_result or error:
             return jsonify({'message': 'Not authenticated', 'session': False}), 401
         
         username = user_info_result.get('username')
-        user_data = get_user_by_username(DB_PATH, username)
+        user_data = get_user_by_username(username)
         
         if not user_data or not user_data.get('private_key'):
             return jsonify({'message': ERROR_USER_NOT_FOUND}), 404
