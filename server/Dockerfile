@@ -16,4 +16,4 @@ EXPOSE 5000
 # ENV FLASK_RUN_HOST=0.0.0.0
 
 # Run the app with python so ssl_context is used
-CMD ["python", "user_api.py"]
+CMD ["python", "app.py"]

@@ -1,4 +1,5 @@
 /server/__pycache__/
+/**/__pycache__/
 /server/db/
 /server/flask_session/
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
@@ -37,6 +38,7 @@ yarn-error.log*
 
 /ignore
 /ignore/*
+/**/ignore
 
 /.vscode
 /.github
