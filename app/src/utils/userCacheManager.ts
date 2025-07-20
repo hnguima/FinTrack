@@ -172,7 +172,7 @@ export class UserCacheManager {
       const cacheTimestamp = timestamp || new Date().toISOString();
 
       // Save user data (convert to record for storage)
-      await saveUserData(userData as Record<string, unknown>, cacheTimestamp);
+      await saveUserData({...userData} as Record<string, unknown>, cacheTimestamp);
 
       // Check if we need to fetch and cache the photo BLOB
       if (userData.photo) {

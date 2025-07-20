@@ -1,6 +1,5 @@
 import "./App.css";
 import "./colors.css";
-import "./types/mui";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import { useState, useEffect } from "react";
 import { usePersistentConfig } from "./hooks/usePersistentConfig";
