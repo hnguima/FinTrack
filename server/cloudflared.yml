@@ -1,0 +1,9 @@
+tunnel: fintrack-api-tunnel
+credentials-file: /app/.cloudflared/fintrack-api-tunnel.json
+
+ingress:
+  - hostname: fintrack-api.the-cube-lab.com
+    service: https://fintrack-api:5000
+    originRequest:
+      noTlsVerify: true
+  - service: http_status:404

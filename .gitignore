@@ -1,3 +1,6 @@
+/server/__pycache__/
+/server/db/
+/server/flask_session/
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -28,3 +31,12 @@ yarn-error.log*
 /server/venv
 /server/src/dbopts.json
 /server/src/serveropts.json
+/server/certs/
+/*/.env
+
+
+/ignore
+/ignore/*
+
+/.vscode
+/.github

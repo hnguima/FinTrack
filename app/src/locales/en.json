@@ -1,0 +1,17 @@
+{
+  "title": "FinTrack",
+  "config": "Config",
+  "userProfile": "Profile",
+  "personalInfo": "Personal Information",
+  "dashboard": "Dashboard",
+  "welcome": "Welcome to FinTrack!",
+  "language": "Language",
+  "theme": "Theme",
+  "en": "English",
+  "pt": "Portuguese",
+  "es": "Spanish",
+  "fr": "French",
+  "de": "German",
+  "name": "Name",
+  "email": "Email"
+}

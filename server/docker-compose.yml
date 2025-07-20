@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  fintrack-api:
+    build: .
+    ports:
+      # - "5000:5000"
+      - "443:5000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./db:/app/db
+      - ./certs:/app/certs
+    restart: unless-stopped
+
+  fintrack-tunnel:
+    image: cloudflare/cloudflared:latest
+    depends_on:
+      - fintrack-api
+    command: tunnel --config /app/cloudflared.yml run
+    volumes:
+      - ./cloudflared.yml:/app/cloudflared.yml:ro
+      - ~/.cloudflared:/etc/cloudflared/:ro
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}

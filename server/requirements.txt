@@ -1,0 +1,8 @@
+
+Flask-Session
+Flask
+Flask-Dance
+flask-cors
+requests-oauthlib
+PyJWT
+cryptography

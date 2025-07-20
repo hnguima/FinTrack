@@ -1,0 +1,19 @@
+{
+  "title": "FinTrack",
+  "config": "Configuração",
+  "userProfile": "Perfil",
+  "personalInfo": "Informações Pessoais",
+  "dashboard": "Painel",
+  "welcome": "Bem-vindo ao FinTrack!",
+  "language": "Idioma",
+  "theme": "Tema",
+  "dark": "Escuro",
+  "light": "Claro",
+  "en": "Inglês",
+  "pt": "Português",
+  "es": "Espanhol",
+  "fr": "Francês",
+  "de": "Alemão",
+  "name": "Nome",
+  "email": "Email"
+}

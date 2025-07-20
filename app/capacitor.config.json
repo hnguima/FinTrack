@@ -1,0 +1,21 @@
+{
+  "appId": "com.fintrack.app",
+  "appName": "FinTrack",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "App": {
+      "launchShowDuration": 0
+    },
+    "Browser": {
+      "androidCustomTabsFeatures": {
+        "showTitle": true,
+        "enableUrlBarHiding": false,
+        "enableDefaultShare": true,
+        "enableCloseButton": true
+      }
+    }
+  }
+}

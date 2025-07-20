@@ -1,0 +1,13 @@
+{
+  "title": "FinTrack",
+  "config": "Configuration",
+  "dashboard": "Tableau de bord",
+  "welcome": "Bienvenue sur FinTrack!",
+  "language": "Langue",
+  "theme": "Thème",
+  "en": "Anglais",
+  "pt": "Portugais",
+  "es": "Espagnol",
+  "fr": "Français",
+  "de": "Allemand"
+}
