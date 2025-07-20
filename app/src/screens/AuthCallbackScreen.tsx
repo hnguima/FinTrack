@@ -56,9 +56,10 @@ const AuthCallbackScreen: React.FC = () => {
         } else {
           throw new Error("No user data received from OAuth callback");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Auth callback error:", err);
-        setError(err.message || "Authentication failed");
+        const errorMessage = err instanceof Error ? err.message : "Authentication failed";
+        setError(errorMessage);
         setStatus("error");
 
         // Redirect back to login after error

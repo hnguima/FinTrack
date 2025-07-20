@@ -1,12 +1,8 @@
 import { ApiClient } from "./apiClient";
 import { UserCacheManager } from "./userCacheManager";
 import { saveUserUpdatedAt } from "../capacitorPreferences";
-
-export interface PendingUserUpdate {
-  data: any;
-  timestamp: number;
-  synced: boolean;
-}
+import type { PendingUserUpdate, User, UserProfileUpdate } from "../types/user";
+import type { ApiResponse } from "../types/api";
 
 export class BackgroundSync {
   private static readonly DEBUG = false; // Debug mode disabled
@@ -14,7 +10,7 @@ export class BackgroundSync {
   private static isCurrentlySyncing = false;
 
   // Queue a user data update for background sync
-  static queueUserUpdate(userData: any) {
+  static queueUserUpdate(userData: UserProfileUpdate) {
     const update: PendingUserUpdate = {
       data: { ...userData },
       timestamp: Date.now(),
@@ -75,7 +71,7 @@ export class BackgroundSync {
       }
 
       // Send update to server
-      const response = await ApiClient.updateUserProfile(latestUpdate.data);
+      const response: ApiResponse<User> = await ApiClient.updateUserProfile(latestUpdate.data);
 
       if (response.status === 200) {
         await this.handleSyncSuccess(response.data);
@@ -97,7 +93,7 @@ export class BackgroundSync {
   }
 
   // Handle successful sync response
-  private static async handleSyncSuccess(serverData: any) {
+  private static async handleSyncSuccess(serverData: User) {
     const serverTimestamp = serverData.updated_at || serverData.created_at;
 
     // Update cache with server response

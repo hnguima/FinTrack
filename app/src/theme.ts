@@ -34,7 +34,7 @@ export const getLightTheme = (): Theme =>
         holiday: getCssVar("--color-date-holiday-light"),
         holidayText: getCssVar("--color-date-holiday-text-light"),
       },
-    } as any,
+    },
   });
 
 export const getDarkTheme = (): Theme =>
@@ -63,5 +63,5 @@ export const getDarkTheme = (): Theme =>
         holiday: getCssVar("--color-date-holiday-dark"),
         holidayText: getCssVar("--color-date-holiday-text-dark"),
       },
-    } as any,
+    },
   });

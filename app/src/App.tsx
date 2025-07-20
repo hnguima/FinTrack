@@ -1,5 +1,6 @@
 import "./App.css";
 import "./colors.css";
+import "./types/mui";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import { useState, useEffect } from "react";
 import { usePersistentConfig } from "./hooks/usePersistentConfig";
@@ -19,12 +20,14 @@ import UserProfileScreen from "./screens/UserProfileScreen";
 import { UserCacheManager } from "./utils/userCacheManager";
 import { TokenManager, ApiClient } from "./utils/apiClient";
 import { BackgroundSync } from "./utils/backgroundSync";
+import type { User, UserProfileUpdate } from "./types/user";
+import type { ApiResponse } from "./types/api";
 
 // Patch console methods globally to add prefix
 (function patchConsoleMethods() {
   const patch = (method: "log" | "error" | "warn") => {
     const original = console[method];
-    console[method] = function (...args: any[]) {
+    console[method] = function (...args: unknown[]) {
       original.apply(console, ["[FinTrack]", ...args]);
     };
   };
@@ -33,7 +36,7 @@ import { BackgroundSync } from "./utils/backgroundSync";
   patch("warn");
 })();
 
-function getUserFromStorage() {
+function getUserFromStorage(): User | null {
   try {
     const user = localStorage.getItem("user");
     const parsedUser = user ? JSON.parse(user) : null;
@@ -95,7 +98,7 @@ function App() {
   };
 
   // Update local user state from server data if it changed
-  const updateUserFromServerData = async (freshData: any) => {
+  const updateUserFromServerData = async (freshData: User) => {
     // Only update if data actually changed to prevent unnecessary re-renders
     const currentUserStr = JSON.stringify(user);
     const freshUserStr = JSON.stringify(freshData);
@@ -146,7 +149,7 @@ function App() {
   const { themeMode, setThemeMode, theme, language, setLanguage } =
     usePersistentConfig();
   const changeLanguage = useChangeLanguage(setLanguage);
-  const [user, setUser] = useState<any>(() => getUserFromStorage());
+  const [user, setUser] = useState<User | null>(() => getUserFromStorage());
   const [safeAreaTop, setSafeAreaTop] = useState<number>(0);
 
   // Fetch user preferences from database and sync with local config
@@ -204,7 +207,7 @@ function App() {
 
       // Request token from server for authenticated users
       console.log("[FinTrack] Requesting JWT token for authenticated user");
-      const response = await ApiClient.post("/api/auth/token", {});
+      const response: ApiResponse<{ token?: string }> = await ApiClient.post("/api/auth/token", {});
 
       if (response.status === 200 && response.data.token) {
         TokenManager.setToken(response.data.token);
@@ -217,18 +220,19 @@ function App() {
     }
   };
 
-  const handleUserUpdate = (updatedUser: any) => {
-    setUser(updatedUser);
+  const handleUserUpdate = (updatedUser: UserProfileUpdate) => {
+    const mergedUser = { ...user, ...updatedUser } as User;
+    setUser(mergedUser);
     
     // Queue the user update for background sync to database
-    BackgroundSync.queueUserUpdate(updatedUser);
+    BackgroundSync.queueUserUpdate(mergedUser);
     
     // Sync preferences if they changed
     if (updatedUser.preferences) {
-      if (updatedUser.preferences.theme !== themeMode) {
+      if (updatedUser.preferences.theme && updatedUser.preferences.theme !== themeMode) {
         setThemeMode(updatedUser.preferences.theme);
       }
-      if (updatedUser.preferences.language !== language) {
+      if (updatedUser.preferences.language && updatedUser.preferences.language !== language) {
         setLanguage(updatedUser.preferences.language);
         i18n.changeLanguage(updatedUser.preferences.language);
       }
@@ -241,6 +245,7 @@ function App() {
       fetchUserPreferences();
       ensureJWTToken();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.username]); // Only re-run if username changes
 
   // Sync i18n language with persistent config
@@ -348,7 +353,7 @@ function App() {
 
   const renderScreen = () => {
     if (screen === "dashboard") return <DashboardScreen />;
-    return (
+    return user ? (
       <UserProfileScreen
         themeMode={themeMode}
         setThemeMode={setThemeMode}
@@ -357,7 +362,7 @@ function App() {
         user={user}
         onUserUpdate={handleUserUpdate}
       />
-    );
+    ) : null;
   };
 
   // If not logged in, show login screen

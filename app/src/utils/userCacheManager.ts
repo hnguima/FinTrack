@@ -8,27 +8,8 @@ import {
   getUserPhotoBlob,
   clearUserCache,
 } from "../capacitorPreferences";
-
-export interface CachedUserData {
-  id: number;
-  username: string;
-  email: string;
-  name: string;
-  photo?: string;
-  provider: string;
-  created_at: string;
-  updated_at?: string;
-  preferences: {
-    theme?: "light" | "dark";
-    language?: string;
-  };
-}
-
-export interface UserUpdateStatus {
-  shouldUpdate: boolean;
-  cachedData: CachedUserData | null;
-  serverTimestamp: string | null;
-}
+import type { CachedUserData, UserUpdateStatus, User } from "../types/user";
+import type { ApiResponse, TimestampResponse } from "../types/api";
 
 export class UserCacheManager {
   private static readonly DEBUG = false; // Disable debug logs - photo update timing issue fixed
@@ -39,14 +20,14 @@ export class UserCacheManager {
 
     try {
       // Get current timestamp from server
-      const timestampResponse = await ApiClient.getUserProfileTimestamp();
+      const timestampResponse: ApiResponse<TimestampResponse> = await ApiClient.getUserProfileTimestamp();
 
       if (timestampResponse.status !== 200) {
         console.warn("[UserCache] Failed to get timestamp from server");
         const { userData } = await getUserData();
         return {
           shouldUpdate: false, // Don't update if we can't check
-          cachedData: userData as CachedUserData,
+          cachedData: userData ? { ...userData, preferences: userData.preferences || {} } as CachedUserData : null,
           serverTimestamp: null,
         };
       }
@@ -82,7 +63,7 @@ export class UserCacheManager {
 
       return {
         shouldUpdate,
-        cachedData: cachedData as CachedUserData,
+        cachedData: cachedData ? { ...cachedData, preferences: cachedData.preferences || {} } as CachedUserData : null,
         serverTimestamp,
       };
     } catch (error) {
@@ -91,7 +72,7 @@ export class UserCacheManager {
       const { userData: cachedData } = await getUserData();
       return {
         shouldUpdate: false,
-        cachedData: cachedData as CachedUserData,
+        cachedData: cachedData ? { ...cachedData, preferences: cachedData.preferences || {} } as CachedUserData : null,
         serverTimestamp: null,
       };
     }
@@ -114,10 +95,10 @@ export class UserCacheManager {
         console.log("[UserCache] Fetching fresh user data from API");
 
         // Fetch fresh data from API
-        const response = await ApiClient.getUserProfile();
+        const response: ApiResponse<User> = await ApiClient.getUserProfile();
 
         if (response.status === 200) {
-          const freshData = response.data as CachedUserData;
+          const freshData = response.data;
           const timestamp =
             updateStatus.serverTimestamp || new Date().toISOString();
 
@@ -144,13 +125,13 @@ export class UserCacheManager {
 
       // Fallback to cached data
       const { userData } = await getUserData();
-      return await this.getCachedDataWithPhoto(userData as CachedUserData);
+      return await this.getCachedDataWithPhoto(userData ? { ...userData, preferences: userData.preferences || {} } as User : null);
     }
   }
 
   // Get cached data with photo BLOB converted to data URL
   private static async getCachedDataWithPhoto(
-    cachedData: CachedUserData | null
+    cachedData: User | CachedUserData | null
   ): Promise<CachedUserData | null> {
     console.log("[UserCache] getCachedDataWithPhoto() called");
 
@@ -166,25 +147,32 @@ export class UserCacheManager {
       !!cachedPhotoDataUrl
     );
 
+    // Ensure we have required preferences for CachedUserData
+    const preferences = cachedData.preferences || {};
+
     if (cachedPhotoDataUrl) {
       console.log("[UserCache] Returning cached data with BLOB photo");
       return {
         ...cachedData,
         photo: cachedPhotoDataUrl,
-      };
+        preferences,
+      } as CachedUserData;
     }
 
     console.log("[UserCache] Returning cached data with original photo URL");
-    return cachedData;
+    return {
+      ...cachedData,
+      preferences,
+    } as CachedUserData;
   }
 
   // Cache user data and photo BLOB
-  static async cacheUserData(userData: CachedUserData, timestamp?: string) {
+  static async cacheUserData(userData: User, timestamp?: string) {
     try {
       const cacheTimestamp = timestamp || new Date().toISOString();
 
-      // Save user data
-      await saveUserData(userData, cacheTimestamp);
+      // Save user data (convert to record for storage)
+      await saveUserData(userData as Record<string, unknown>, cacheTimestamp);
 
       // Check if we need to fetch and cache the photo BLOB
       if (userData.photo) {
@@ -428,10 +416,10 @@ export class UserCacheManager {
         console.log("[UserCache] Force refreshing user data");
       }
 
-      const response = await ApiClient.getUserProfile();
+      const response: ApiResponse<User> = await ApiClient.getUserProfile();
 
       if (response.status === 200) {
-        const freshData = response.data as CachedUserData;
+        const freshData = response.data;
         const serverTimestamp =
           freshData.updated_at ||
           freshData.created_at ||

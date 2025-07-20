@@ -19,24 +19,16 @@ import { BackgroundSync } from "../utils/backgroundSync";
 import { UserCacheManager } from "../utils/userCacheManager";
 import { saveUserUpdatedAt } from "../capacitorPreferences";
 import ProfilePhoto from "../components/ProfilePhoto";
+import type { User, UserProfileUpdate, PhotoUploadResponse } from "../types/user";
+import type { ApiResponse } from "../types/api";
 
 interface UserProfileScreenProps {
   themeMode: "light" | "dark";
   setThemeMode: (mode: "light" | "dark") => void;
   language: string;
   setLanguage: (lang: string) => void;
-  user: {
-    username: string;
-    email: string;
-    name: string;
-    provider: string;
-    photo?: string;
-    preferences?: {
-      theme: "light" | "dark";
-      language: string;
-    };
-  };
-  onUserUpdate: (updatedUser: any) => void;
+  user: User;
+  onUserUpdate: (updatedUser: UserProfileUpdate) => void;
 }
 
 const Pane = styled(Paper)(({ theme }) => ({
@@ -95,7 +87,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
       onUserUpdate(optimisticUser);
       await UserCacheManager.updateCachedPhoto(tempUrl);
 
-      const response = await ApiClient.uploadProfilePhoto(file);
+      const response: ApiResponse<PhotoUploadResponse> = await ApiClient.uploadProfilePhoto(file);
 
       if (response.status === 200) {
         // Instead of fetching fresh profile (which loses unsaved changes),
@@ -103,9 +95,9 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
         const uploadResponseData = response.data;
         
         // Create updated user data by preserving local changes and adding new photo
-        const updatedUserWithPhoto = { 
+        const updatedUserWithPhoto: User = { 
           ...user, // Start with current user (preserves unsaved changes like theme)
-          ...uploadResponseData, // Add server fields (id, created_at, etc.)
+          ...uploadResponseData as Partial<User>, // Add server fields (id, created_at, etc.)
           ...user, // Re-apply user data to override any server preferences with local ones
           photo: uploadResponseData.photo || uploadResponseData.photoUrl, // Use new photo from server
           updated_at: uploadResponseData.updated_at || uploadResponseData.created_at
@@ -113,8 +105,10 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
 
         // Update cache with the merged data
         const serverTimestamp = updatedUserWithPhoto.updated_at;
-        await UserCacheManager.cacheUserData(updatedUserWithPhoto, serverTimestamp);
-        await saveUserUpdatedAt(serverTimestamp);
+        if (serverTimestamp) {
+          await UserCacheManager.cacheUserData(updatedUserWithPhoto, serverTimestamp);
+          await saveUserUpdatedAt(serverTimestamp);
+        }
 
         // Also ensure the photo BLOB is cached with the correct timestamp
         const newPhotoUrl = updatedUserWithPhoto.photo;
@@ -262,11 +256,11 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     document.getElementById("photo-file-input")?.click();
   };
 
-  const updateProfile = async (updates: any) => {
+  const updateProfile = async (updates: UserProfileUpdate) => {
     setIsLoading(true);
     try {
       // Merge updates with current user data
-      const updatedUser = { ...user, ...updates };
+      const updatedUser: UserProfileUpdate = { ...user, ...updates };
       
       // Update local state immediately for responsiveness
       onUserUpdate(updatedUser);
@@ -410,7 +404,9 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           <Typography>{t("language")}</Typography>
           <Select
             value={language}
-            onChange={(e: any) => handleLanguageChange(e.target.value)}
+            onChange={(e) => 
+              handleLanguageChange(e.target.value as string)
+            }
             size="small"
             sx={{ minWidth: 120 }}
             disabled={isLoading}

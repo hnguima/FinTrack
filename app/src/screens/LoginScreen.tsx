@@ -54,8 +54,9 @@ const LoginScreen: React.FC = () => {
         );
         setIsLoading(false);
       }
-    } catch (err: any) {
-      const fallbackMsg = typeof err?.message === "string" ? err.message : "Failed to initiate login. Please try again.";
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to initiate login. Please try again.";
+      const fallbackMsg = errorMessage;
       setError(t("login_error", { defaultValue: fallbackMsg }));
       setIsLoading(false);
     }

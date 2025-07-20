@@ -28,8 +28,7 @@ export function usePersistentConfig() {
         setLanguage("en");
       }
     });
-    // eslint-disable-next-line
-  }, []);
+  }, []); // Only run on mount
 
   useEffect(() => {
     if (language) {

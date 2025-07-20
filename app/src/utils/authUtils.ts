@@ -76,7 +76,7 @@ const handleWebOAuth = async (): Promise<AuthResult> => {
     } else {
       throw new Error("Failed to get OAuth URL");
     }
-  } catch (error) {
+  } catch {
     return {
       success: false,
       error: "Failed to initiate login. Please try again.",

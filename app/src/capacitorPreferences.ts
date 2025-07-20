@@ -118,7 +118,7 @@ export async function getUserPhotoBlob(): Promise<{
 }
 
 // User data caching with timestamp
-export async function saveUserData(userData: any, timestamp?: string) {
+export async function saveUserData(userData: Record<string, unknown>, timestamp?: string) {
   try {
     if (CAP_PREFS_DEBUG)
       console.log(`[CapacitorPreferences] Saving user data:`, userData);
@@ -140,7 +140,7 @@ export async function saveUserData(userData: any, timestamp?: string) {
 }
 
 export async function getUserData(): Promise<{
-  userData: any | null;
+  userData: Record<string, unknown> | null;
   updatedAt: string | null;
 }> {
   try {

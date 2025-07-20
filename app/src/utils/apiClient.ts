@@ -1,5 +1,7 @@
 import { CapacitorHttp } from "@capacitor/core";
 import { isNativeMobile } from "./authUtils";
+import type { ApiResponse, SessionResponse, HealthCheckResponse, TimestampResponse } from "../types/api";
+import type { User, UserProfileUpdate, PhotoUploadResponse } from "../types/user";
 
 const API_BASE_URL = "https://fintrack-api.the-cube-lab.com";
 
@@ -29,7 +31,7 @@ export class TokenManager {
   }
 
   static async getValidToken(): Promise<string | null> {
-    let token = this.getToken();
+    const token = this.getToken();
 
     if (!token) {
       console.log("[FinTrack] No token found in storage");
@@ -40,7 +42,7 @@ export class TokenManager {
             credentials: "include",
           });
           if (response.ok) {
-            const data = await response.json();
+            const data: SessionResponse = await response.json();
             if (data.token) {
               console.log("[FinTrack] Got token from session");
               this.setToken(data.token);
@@ -66,7 +68,11 @@ export class TokenManager {
 
 // API Client with token management
 export class ApiClient {
-  private static async makeRequest(url: string, options: any = {}) {
+  private static async makeRequest<T = unknown>(url: string, options: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: Record<string, unknown>;
+  } = {}): Promise<ApiResponse<T>> {
     const token = await TokenManager.getValidToken();
 
     console.log("[FinTrack] API Request:", url);
@@ -78,7 +84,7 @@ export class ApiClient {
       );
     }
 
-    const headers = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...options.headers,
     };
@@ -105,51 +111,52 @@ export class ApiClient {
         credentials: "include",
       });
 
+      const responseData = await response.json();
       return {
         status: response.status,
-        data: await response.json(),
+        data: responseData,
       };
     }
   }
 
-  static async get(endpoint: string) {
-    return this.makeRequest(`${API_BASE_URL}${endpoint}`, { method: "GET" });
+  static async get<T = unknown>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(`${API_BASE_URL}${endpoint}`, { method: "GET" });
   }
 
-  static async post(endpoint: string, data: any) {
-    return this.makeRequest(`${API_BASE_URL}${endpoint}`, {
+  static async post<T = unknown>(endpoint: string, data: Record<string, unknown>): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       body: data,
     });
   }
 
-  static async put(endpoint: string, data: any) {
-    return this.makeRequest(`${API_BASE_URL}${endpoint}`, {
+  static async put<T = unknown>(endpoint: string, data: Record<string, unknown>): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(`${API_BASE_URL}${endpoint}`, {
       method: "PUT",
       body: data,
     });
   }
 
-  static async delete(endpoint: string) {
-    return this.makeRequest(`${API_BASE_URL}${endpoint}`, { method: "DELETE" });
+  static async delete<T = unknown>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(`${API_BASE_URL}${endpoint}`, { method: "DELETE" });
   }
 
   // User profile methods
-  static async getUserProfile() {
-    return this.get("/api/users/profile");
+  static async getUserProfile(): Promise<ApiResponse<User>> {
+    return this.get<User>("/api/users/profile");
   }
 
-  static async getUserProfileTimestamp() {
-    return this.get("/api/users/profile/timestamp");
+  static async getUserProfileTimestamp(): Promise<ApiResponse<TimestampResponse>> {
+    return this.get<TimestampResponse>("/api/users/profile/timestamp");
   }
 
-  static async updateUserProfile(updates: any) {
-    return this.put("/api/users/profile", updates);
+  static async updateUserProfile(updates: UserProfileUpdate): Promise<ApiResponse<User>> {
+    return this.put<User>("/api/users/profile", updates as Record<string, unknown>);
   }
 
-  static async uploadProfilePhoto(file: File) {
+  static async uploadProfilePhoto(file: File): Promise<ApiResponse<PhotoUploadResponse>> {
     const token = await TokenManager.getValidToken();
-    const headers: any = {};
+    const headers: Record<string, string> = {};
 
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -189,7 +196,7 @@ export class ApiClient {
       formData.append("photo", file);
 
       // Don't set Content-Type for FormData, let browser set it automatically
-      const webHeaders: any = {};
+      const webHeaders: Record<string, string> = {};
       if (token) {
         webHeaders["Authorization"] = `Bearer ${token}`;
       }
@@ -201,16 +208,17 @@ export class ApiClient {
         credentials: "include",
       });
 
+      const responseData: PhotoUploadResponse = await response.json();
       return {
         status: response.status,
-        data: await response.json(),
+        data: responseData,
       };
     }
   }
 
   // Health check
-  static async healthCheck() {
-    return this.get("/api/health");
+  static async healthCheck(): Promise<ApiResponse<HealthCheckResponse>> {
+    return this.get<HealthCheckResponse>("/api/health");
   }
 }
 
