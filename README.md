@@ -1,124 +1,210 @@
-<<<<<<< HEAD
-# FinTrack
-Finance tracking assistant 
-=======
-# Getting Started with Create React App
+# FinTrack 💰
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive cross-platform finance tracking application built with React, TypeScript, and Capacitor. FinTrack provides users with powerful tools to manage their finances, track expenses, and analyze spending patterns with real-time data and intelligent caching.
 
-## Available Scripts
+## 🌟 Features
 
-In the project directory, you can run:
+### 🔐 Authentication & Security
+- **Google OAuth Integration** - Secure authentication with Google accounts
+- **JWT Token Management** - Secure API access with token-based authentication
+- **User Profile Management** - Personal information, preferences, and photo upload
 
-### `npm start`
+### 📱 Cross-Platform Support
+- **Web Application** - Full-featured web interface with responsive design
+- **Android Mobile App** - Native Android experience using Capacitor
+- **Progressive Web App (PWA)** - Installable web app with offline capabilities
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 💼 Account Management
+- **Multi-Account Support** - Manage checking, savings, credit, investment, and cash accounts
+- **Real-time Balance Tracking** - Instant balance calculations with smart caching
+- **Account Categories** - Organize accounts by type with custom institution information
+- **Instant Loading** - Accounts load instantly with intelligent background updates
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 💸 Transaction Management
+- **Comprehensive Transaction Tracking** - Record income, expenses, and transfers
+- **Advanced Search & Filtering** - Find transactions by date, amount, account, or description
+- **Responsive Transaction Grid** - Mobile-optimized display with expandable details
+- **Month Grouping** - Organize transactions by month for better organization
+- **Bulk Operations** - Efficient handling of large transaction datasets
 
-### `npm test`
+### 📊 Analytics & Insights
+- **Real-time Spending Analytics** - Interactive charts showing spending patterns
+- **Category Analysis** - Breakdown of expenses by category with visual representations
+- **Time Period Comparisons** - Weekly, monthly, and yearly spending analysis
+- **Recharts Integration** - Beautiful, interactive data visualizations
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### ⚡ Performance & Caching
+- **Financial Caching System** - Intelligent caching for instant data loading
+- **Smart Balance Optimization** - Cached balances with background refresh
+- **Optimistic Updates** - Immediate UI feedback with background synchronization
+- **Background Sync** - Seamless data consistency across devices
 
-### `npm run build`
+### 🌍 Internationalization
+- **Multi-language Support** - English and Portuguese with extensible i18n system
+- **Theme Customization** - Light and dark themes with user preferences
+- **Responsive Design** - Optimized for mobile, tablet, and desktop screens
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 🔄 Data Synchronization
+- **Real-time Updates** - Changes sync instantly across all user sessions
+- **Conflict Resolution** - Smart handling of concurrent updates
+- **Offline Capability** - Local storage with background sync when online
+- **Multi-device Consistency** - Seamless experience across web and mobile
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🏗️ Technical Architecture
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Frontend Stack
+- **React 19** - Modern React with hooks and concurrent features
+- **TypeScript** - Type-safe development with comprehensive interfaces
+- **Material-UI v7** - Modern, accessible component library
+- **Vite** - Fast build tool with hot module replacement
+- **Capacitor** - Cross-platform native app capabilities
 
-### `npm run eject`
+### Backend Infrastructure
+- **Flask** - Python web framework with RESTful API design
+- **SQLite** - Lightweight, reliable database with transaction support
+- **JWT Authentication** - Secure token-based API access
+- **Google OAuth** - Third-party authentication integration
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Mobile & PWA
+- **Android Support** - Native Android app with Capacitor
+- **Camera Integration** - Photo capture for profile pictures
+- **Status Bar Management** - Native mobile UI integration
+- **Safe Area Handling** - Proper mobile layout with notch support
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Caching & Performance
+- **Capacitor Preferences** - Secure local storage for cached data
+- **Financial Cache Manager** - Intelligent caching with timestamp validation
+- **Background Updates** - Non-blocking data refresh
+- **Optimistic Loading** - Instant UI updates with fallback handling
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🚀 Getting Started
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Prerequisites
+- Node.js 18+ and npm
+- Python 3.11+
+- Android Studio (for mobile development)
 
-## Learn More
+### Frontend Setup
+```bash
+cd app
+npm install
+npm run dev          # Development server
+npm run build        # Production build
+npm run build:android # Android build
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Backend Setup
+```bash
+cd server
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python app.py        # Start Flask server
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Mobile Development
+```bash
+cd app
+npm run build
+npx cap sync android
+npx cap open android
+```
 
-### Code Splitting
+## 📱 Application Screens
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 🏠 Dashboard
+- Overview of all accounts with real-time balances
+- Recent transactions summary
+- Quick access to main features
 
-### Analyzing the Bundle Size
+### 💳 Accounts
+- Create and manage financial accounts
+- Real-time balance calculations
+- Account type categorization (checking, savings, credit, etc.)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### 💰 Transactions
+- Add, edit, and delete transactions
+- Advanced search and filtering
+- Responsive grid layout with mobile optimization
+- Monthly grouping and organization
 
-### Making a Progressive Web App
+### 📈 Analytics
+- Interactive spending charts with Recharts
+- Category breakdown and trend analysis
+- Time period comparisons (weekly, monthly, yearly)
+- Real-time calculations from cached data
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### 👤 Profile
+- User information management
+- Theme and language preferences
+- Profile photo upload with camera integration
+- Settings synchronization across devices
 
-### Advanced Configuration
+## 🎯 Key Innovations
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Intelligent Caching System
+- **Instant Loading**: All screens load instantly with cached data
+- **Background Refresh**: Data updates silently in the background
+- **Smart Invalidation**: Cache updates only when server data changes
+- **Optimistic Updates**: UI responds immediately to user actions
 
-### Deployment
+### Responsive Design
+- **Mobile-First**: Optimized for touch interfaces and small screens
+- **Adaptive Layouts**: Components adjust to screen size and orientation
+- **Native Feel**: Mobile app feels native with proper safe area handling
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Real-time Analytics
+- **Client-side Calculations**: Analytics computed from cached transaction data
+- **Interactive Visualizations**: Touch-friendly charts with drill-down capabilities
+- **Performance Optimized**: No API calls needed for analytics after initial load
 
-### `npm run build` fails to minify
+## 🔧 Development Features
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Code Organization
+- **Component-based Architecture**: Modular, reusable components
+- **TypeScript Interfaces**: Comprehensive type definitions
+- **Conventional Commits**: Semantic versioning and clear git history
+- **ESLint & Prettier**: Code quality and formatting standards
 
-## Suggested Structure for Finance Assist Application
+### Testing & Quality
+- **Type Safety**: Full TypeScript coverage with strict mode
+- **Error Handling**: Comprehensive error boundaries and fallbacks
+- **Performance Monitoring**: Built-in debug logging and performance tracking
 
-- **User Authentication**
+## 📄 Documentation
 
-  - **Justification**: Secure access to user-specific financial data and personalized experience.
+- **Copilot Instructions**: Comprehensive development guidelines in `.github/copilot-instructions.md`
+- **Android Setup**: Mobile development guide in `app/android-setup.md`
+- **API Documentation**: Server endpoint documentation in `server/README.md`
 
-- **Dashboard**
+## 🚢 Deployment
 
-  - **Justification**: Provides an overview of the user's financial status, including account balances, recent transactions, and financial goals.
+### Web Deployment
+```bash
+cd app
+npm run build
+# Deploy dist/ folder to your hosting provider
+```
 
-- **Expense Tracking**
+### Android Release
+```bash
+cd app
+npm run build:android
+# Open Android Studio and build release APK
+```
 
-  - **Justification**: Allows users to log and categorize expenses, helping them understand spending habits and manage budgets effectively.
+## 🤝 Contributing
 
-- **Income Management**
+1. Follow the coding patterns established in `.github/copilot-instructions.md`
+2. Use conventional commit messages
+3. Ensure TypeScript types are properly defined
+4. Test on both web and mobile platforms
+5. Maintain responsive design principles
 
-  - **Justification**: Tracks various income sources, ensuring users have a clear picture of their earnings.
+## 📜 License
 
-- **Budgeting Tools**
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-  - **Justification**: Helps users set and monitor budgets for different categories, promoting better financial planning and control.
+---
 
-- **Savings Goals**
-
-  - **Justification**: Enables users to set and track progress towards specific savings goals, encouraging disciplined saving habits.
-
-- **Investment Tracking**
-
-  - **Justification**: Monitors investment portfolios, providing insights into performance and helping users make informed decisions.
-
-- **Bill Reminders**
-
-  - **Justification**: Sends notifications for upcoming bills, reducing the risk of missed payments and late fees.
-
-- **Reports and Analytics**
-
-  - **Justification**: Generates detailed financial reports and visualizations, aiding in the analysis of financial health and trends.
-
-- **Multi-Currency Support**
-
-  - **Justification**: Accommodates users with international finances, allowing for accurate tracking and conversion of different currencies.
-
-- **Data Export**
-
-  - **Justification**: Provides options to export financial data for use in other applications or for personal records.
-
-- **Mobile App Integration**
-  - **Justification**: Ensures users can access and manage their finances on-the-go, enhancing convenience and usability.
->>>>>>> 6bb83f8 (first commit)
+**FinTrack** - Making personal finance management simple, fast, and accessible across all your devices. 🚀
