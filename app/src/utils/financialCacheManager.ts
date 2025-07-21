@@ -44,7 +44,7 @@ export class FinancialCacheManager {
   ): Promise<void> {
     try {
       const cacheTimestamp = timestamp || new Date().toISOString();
-      
+
       const financeData: CachedFinanceData = {
         transactions,
         accounts,
@@ -79,17 +79,17 @@ export class FinancialCacheManager {
   static async getCachedFinanceData(): Promise<CachedFinanceData | null> {
     try {
       const userData = await this.getFinanceCache(FINANCE_DATA_KEY);
-      
+
       // Debug: Log what's in the cache
       if (this.DEBUG && userData) {
         console.log("[FinanceCache] Cached data sample:", {
           transactionCount: userData.transactions?.length || 0,
           accountCount: userData.accounts?.length || 0,
           firstAccount: userData.accounts?.[0] || null,
-          accountHasBalance: userData.accounts?.[0]?.balance !== undefined
+          accountHasBalance: userData.accounts?.[0]?.balance !== undefined,
         });
       }
-      
+
       return userData as CachedFinanceData;
     } catch (error) {
       if (this.DEBUG) {
@@ -179,12 +179,15 @@ export class FinancialCacheManager {
     }
 
     // Check if accounts have balance information (data format validation)
-    const accountsHaveBalance = cachedData.accounts.length === 0 || 
-      cachedData.accounts.some(account => account.balance !== undefined);
-    
+    const accountsHaveBalance =
+      cachedData.accounts.length === 0 ||
+      cachedData.accounts.some((account) => account.balance !== undefined);
+
     if (!accountsHaveBalance) {
       if (this.DEBUG) {
-        console.log("[FinanceCache] Cached accounts missing balance data - need to update");
+        console.log(
+          "[FinanceCache] Cached accounts missing balance data - need to update"
+        );
       }
       return true;
     }
@@ -250,49 +253,65 @@ export class FinancialCacheManager {
   // Get accounts with smart balance caching
   static async getAccountsWithCachedBalances(): Promise<any[]> {
     if (this.DEBUG) {
-      console.log("[FinanceCache] === getAccountsWithCachedBalances() called ===");
+      console.log(
+        "[FinanceCache] === getAccountsWithCachedBalances() called ==="
+      );
     }
 
     try {
       // First check cache without making any API calls
       const cachedData = await this.getCachedFinanceData();
-      
+
       // If we have cached accounts with balances, return them immediately
-      if (cachedData?.accountsWithBalances && cachedData.accountsWithBalances.length > 0) {
+      if (
+        cachedData?.accountsWithBalances &&
+        cachedData.accountsWithBalances.length > 0
+      ) {
         if (this.DEBUG) {
-          console.log("[FinanceCache] Using cached accounts with balances (instant load)");
+          console.log(
+            "[FinanceCache] Using cached accounts with balances (instant load)"
+          );
         }
-        
+
         // Still need to check if data is current, but do it in background
-        this.checkFinanceUpdateStatus().then(updateStatus => {
-          if (updateStatus.shouldUpdate) {
-            if (this.DEBUG) {
-              console.log("[FinanceCache] Background refresh needed - will update on next call");
+        this.checkFinanceUpdateStatus()
+          .then((updateStatus) => {
+            if (updateStatus.shouldUpdate) {
+              if (this.DEBUG) {
+                console.log(
+                  "[FinanceCache] Background refresh needed - will update on next call"
+                );
+              }
+              // Silently fetch fresh data for next time
+              this.fetchAndCacheFinanceData(updateStatus.serverTimestamp);
             }
-            // Silently fetch fresh data for next time
-            this.fetchAndCacheFinanceData(updateStatus.serverTimestamp);
-          }
-        }).catch(error => {
-          if (this.DEBUG) {
-            console.error("[FinanceCache] Background update check failed:", error);
-          }
-        });
-        
+          })
+          .catch((error) => {
+            if (this.DEBUG) {
+              console.error(
+                "[FinanceCache] Background update check failed:",
+                error
+              );
+            }
+          });
+
         return cachedData.accountsWithBalances;
       }
 
       // No cached balances, need to fetch fresh data
       if (this.DEBUG) {
-        console.log("[FinanceCache] No cached balances found, fetching fresh data");
+        console.log(
+          "[FinanceCache] No cached balances found, fetching fresh data"
+        );
       }
-      
+
       const updateStatus = await this.checkFinanceUpdateStatus();
-      
+
       // Fetch fresh account balances
       const accountsResponse = await ApiClient.getAccountsSummary();
       if (accountsResponse.status === 200) {
         const accountsWithBalances = accountsResponse.data;
-        
+
         // Update cache with fresh balances
         const transactions = cachedData?.transactions || [];
         await this.cacheFinanceData(
@@ -300,15 +319,17 @@ export class FinancialCacheManager {
           accountsWithBalances,
           updateStatus.serverTimestamp || undefined
         );
-        
+
         return accountsWithBalances;
       }
 
       // Fallback: return what we have
       return cachedData?.accounts || [];
-
     } catch (error) {
-      console.error("[FinanceCache] Error getting accounts with cached balances:", error);
+      console.error(
+        "[FinanceCache] Error getting accounts with cached balances:",
+        error
+      );
       const fallbackData = await this.getFallbackFinanceData();
       return fallbackData.accounts;
     }
@@ -342,7 +363,7 @@ export class FinancialCacheManager {
         console.log("[FinanceCache] Fresh accounts sample:", {
           accountCount: accounts?.length || 0,
           firstAccount: accounts?.[0] || null,
-          accountHasBalance: accounts?.[0]?.balance !== undefined
+          accountHasBalance: accounts?.[0]?.balance !== undefined,
         });
       }
 
@@ -435,6 +456,6 @@ export class FinancialCacheManager {
 }
 
 // Make debug function available in browser console for testing
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   (window as any).FinancialCacheManager = FinancialCacheManager;
 }

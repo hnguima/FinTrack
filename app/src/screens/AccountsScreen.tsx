@@ -24,7 +24,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { ApiClient } from "../utils/apiClient";
 import { FinancialCacheManager } from "../utils/financialCacheManager";
-import type { Account, CreateAccountRequest, AccountType } from "../types/finance";
+import type {
+  Account,
+  CreateAccountRequest,
+  AccountType,
+} from "../types/finance";
 import AccountForm from "../components/AccountForm";
 
 // Temporary interface until we fix the module import issue
@@ -75,7 +79,9 @@ const AccountsScreen: React.FC<AccountsScreenProps> = () => {
   });
 
   // Convert AccountWithBalance to CreateAccountRequest for form
-  const convertAccountForForm = (account: AccountWithBalance | null): Partial<CreateAccountRequest> | null => {
+  const convertAccountForForm = (
+    account: AccountWithBalance | null
+  ): Partial<CreateAccountRequest> | null => {
     if (!account) return null;
     return {
       name: account.name,
@@ -93,14 +99,17 @@ const AccountsScreen: React.FC<AccountsScreenProps> = () => {
 
   const loadAccounts = async () => {
     try {
-      console.log('[AccountsScreen] Loading accounts with smart balance caching...');
-      
+      console.log(
+        "[AccountsScreen] Loading accounts with smart balance caching..."
+      );
+
       // Use the smart balance caching method which handles everything
-      const accountsWithBalances = await FinancialCacheManager.getAccountsWithCachedBalances();
-      
+      const accountsWithBalances =
+        await FinancialCacheManager.getAccountsWithCachedBalances();
+
       // Update accounts with the result (may be instant if cache was current)
       setAccounts(accountsWithBalances);
-      console.log('[AccountsScreen] Accounts loaded/updated');
+      console.log("[AccountsScreen] Accounts loaded/updated");
     } catch (error) {
       console.error("Error loading accounts:", error);
       setSnackbar({

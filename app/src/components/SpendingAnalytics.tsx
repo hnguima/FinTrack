@@ -70,20 +70,27 @@ const SpendingAnalytics: React.FC<AnalyticsProps> = ({ dateRange }) => {
     loadSpendingAnalysis();
   }, [period, dateRange]);
 
-  const calculateSpendingAnalysis = (transactions: any[], startDate: string, endDate: string): SpendingData[] => {
+  const calculateSpendingAnalysis = (
+    transactions: any[],
+    startDate: string,
+    endDate: string
+  ): SpendingData[] => {
     // Filter transactions by date range and exclude income (positive amounts)
-    const filteredTransactions = transactions.filter(transaction => {
+    const filteredTransactions = transactions.filter((transaction) => {
       const transactionDate = transaction.date;
-      return transactionDate >= startDate && 
-             transactionDate <= endDate && 
-             transaction.amount < 0; // Only expenses (negative amounts)
+      return (
+        transactionDate >= startDate &&
+        transactionDate <= endDate &&
+        transaction.amount < 0
+      ); // Only expenses (negative amounts)
     });
 
     // Group by category and calculate totals
-    const categoryTotals: { [key: string]: { amount: number; count: number } } = {};
-    
-    filteredTransactions.forEach(transaction => {
-      const category = transaction.category || 'Uncategorized';
+    const categoryTotals: { [key: string]: { amount: number; count: number } } =
+      {};
+
+    filteredTransactions.forEach((transaction) => {
+      const category = transaction.category || "Uncategorized";
       if (!categoryTotals[category]) {
         categoryTotals[category] = { amount: 0, count: 0 };
       }
@@ -92,15 +99,20 @@ const SpendingAnalytics: React.FC<AnalyticsProps> = ({ dateRange }) => {
     });
 
     // Calculate total spending for percentage calculation
-    const totalSpending = Object.values(categoryTotals).reduce((sum, cat) => sum + cat.amount, 0);
+    const totalSpending = Object.values(categoryTotals).reduce(
+      (sum, cat) => sum + cat.amount,
+      0
+    );
 
     // Convert to array format expected by charts with percentage
-    return Object.entries(categoryTotals).map(([category, data]) => ({
-      category,
-      amount: data.amount,
-      count: data.count,
-      percentage: totalSpending > 0 ? (data.amount / totalSpending) * 100 : 0
-    })).sort((a, b) => b.amount - a.amount); // Sort by amount descending
+    return Object.entries(categoryTotals)
+      .map(([category, data]) => ({
+        category,
+        amount: data.amount,
+        count: data.count,
+        percentage: totalSpending > 0 ? (data.amount / totalSpending) * 100 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount); // Sort by amount descending
   };
 
   const loadSpendingAnalysis = async () => {
@@ -121,11 +133,11 @@ const SpendingAnalytics: React.FC<AnalyticsProps> = ({ dateRange }) => {
           const startOfWeek = new Date(now);
           startOfWeek.setDate(currentDate - now.getDay());
           startOfWeek.setHours(0, 0, 0, 0);
-          
+
           const endOfWeek = new Date(startOfWeek);
           endOfWeek.setDate(startOfWeek.getDate() + 6);
           endOfWeek.setHours(23, 59, 59, 999);
-          
+
           startDate = startOfWeek.toISOString().split("T")[0];
           endDate = endOfWeek.toISOString().split("T")[0];
           break;
@@ -171,23 +183,31 @@ const SpendingAnalytics: React.FC<AnalyticsProps> = ({ dateRange }) => {
       // Try to get cached transactions first for instant display
       const cachedData = await FinancialCacheManager.getCachedFinanceData();
       if (cachedData?.transactions?.length) {
-        const analyticsData = calculateSpendingAnalysis(cachedData.transactions, startDate, endDate);
+        const analyticsData = calculateSpendingAnalysis(
+          cachedData.transactions,
+          startDate,
+          endDate
+        );
         setSpendingData(analyticsData);
         setLoading(false);
       }
 
       // Always refresh transactions in background to ensure data is current
       const freshData = await FinancialCacheManager.getFinanceDataWithCache();
-      const analyticsData = calculateSpendingAnalysis(freshData.transactions, startDate, endDate);
+      const analyticsData = calculateSpendingAnalysis(
+        freshData.transactions,
+        startDate,
+        endDate
+      );
       setSpendingData(analyticsData);
-      
     } catch (err: any) {
       console.error("Error loading spending analysis:", err);
       setError(err.message || "Failed to load spending analysis");
     } finally {
       setLoading(false);
     }
-  };  const handleRefresh = () => {
+  };
+  const handleRefresh = () => {
     loadSpendingAnalysis();
   };
 

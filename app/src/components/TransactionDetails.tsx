@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Dialog,
   DialogTitle,
@@ -9,8 +9,8 @@ import {
   Divider,
   Grid,
   IconButton,
-} from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+} from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
 
 interface Transaction {
   id: number;
@@ -44,59 +44,67 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
 
   const formatAmount = (amount: number, type: string) => {
     const formatted = Math.abs(amount).toFixed(2);
-    return type === 'income' ? `+$${formatted}` : `-$${formatted}`;
+    return type === "income" ? `+$${formatted}` : `-$${formatted}`;
   };
 
   const formatDate = (dateStr: string) => {
     try {
       let processedDate = dateStr;
-      if (dateStr.includes('T')) {
-        processedDate = dateStr.split('T')[0];
-      } else if (dateStr.includes(' ')) {
-        processedDate = dateStr.split(' ')[0];
+      if (dateStr.includes("T")) {
+        processedDate = dateStr.split("T")[0];
+      } else if (dateStr.includes(" ")) {
+        processedDate = dateStr.split(" ")[0];
       }
-      
+
       const date = new Date(processedDate);
       if (isNaN(date.getTime())) {
         return dateStr;
       }
-      
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
     } catch (error) {
-      console.error('Error formatting date:', error);
+      console.error("Error formatting date:", error);
       return dateStr;
     }
   };
 
   const getAccountName = (accountId: number | null | undefined) => {
-    if (!accountId) return 'External';
-    const account = accounts.find(acc => acc.id === accountId);
+    if (!accountId) return "External";
+    const account = accounts.find((acc) => acc.id === accountId);
     return account ? account.name : `Account ${accountId}`;
   };
 
   const getTransactionType = () => {
     if (!transaction.to_account_id) {
-      return transaction.entry_type === 'income' ? 'Income from External Source' : 'Expense to External Destination';
+      return transaction.entry_type === "income"
+        ? "Income from External Source"
+        : "Expense to External Destination";
     } else if (!transaction.account_id) {
-      return 'Income from External Source';
+      return "Income from External Source";
     } else {
-      return 'Transfer';
+      return "Transfer";
     }
   };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         Transaction Details
         <IconButton
           onClick={onClose}
-          sx={{ 
-            color: 'grey.500',
-            '&:hover': { color: 'grey.700' }
+          sx={{
+            color: "grey.500",
+            "&:hover": { color: "grey.700" },
           }}
         >
           <CloseIcon />
@@ -105,10 +113,10 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
       <DialogContent>
         <Box sx={{ py: 2 }}>
           {/* Transaction Type & Amount */}
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
+          <Box sx={{ textAlign: "center", mb: 3 }}>
             <Typography
               variant="h4"
-              color={transaction.amount >= 0 ? 'success.main' : 'error.main'}
+              color={transaction.amount >= 0 ? "success.main" : "error.main"}
               fontWeight="bold"
               gutterBottom
             >
@@ -117,9 +125,9 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
             <Chip
               label={getTransactionType()}
               color={(() => {
-                if (transaction.entry_type === 'income') return 'success';
-                if (transaction.entry_type === 'expense') return 'error';
-                return 'primary';
+                if (transaction.entry_type === "income") return "success";
+                if (transaction.entry_type === "expense") return "error";
+                return "primary";
               })()}
               variant="outlined"
             />
@@ -133,7 +141,7 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
               <Typography variant="subtitle2" color="text.secondary">
                 Description
               </Typography>
-              <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
+              <Typography variant="body1" sx={{ wordBreak: "break-word" }}>
                 {transaction.description}
               </Typography>
             </Grid>
@@ -145,7 +153,11 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
               <Chip
                 label={transaction.category}
                 size="small"
-                color={transaction.category.includes('External') ? 'secondary' : 'default'}
+                color={
+                  transaction.category.includes("External")
+                    ? "secondary"
+                    : "default"
+                }
               />
             </Grid>
 
@@ -181,9 +193,7 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
                 <Typography variant="subtitle2" color="text.secondary">
                   Location
                 </Typography>
-                <Typography variant="body1">
-                  {transaction.location}
-                </Typography>
+                <Typography variant="body1">{transaction.location}</Typography>
               </Grid>
             )}
 
@@ -199,7 +209,11 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
 
           {transaction.attachment_url && (
             <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                gutterBottom
+              >
                 Attachment
               </Typography>
               <Box
@@ -208,16 +222,16 @@ const TransactionDetails: React.FC<TransactionDetailsProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{
-                  display: 'inline-block',
+                  display: "inline-block",
                   padding: 1,
                   border: 1,
-                  borderColor: 'divider',
+                  borderColor: "divider",
                   borderRadius: 1,
-                  textDecoration: 'none',
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: 'action.hover'
-                  }
+                  textDecoration: "none",
+                  color: "primary.main",
+                  "&:hover": {
+                    backgroundColor: "action.hover",
+                  },
                 }}
               >
                 View Attachment

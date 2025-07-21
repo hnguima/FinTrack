@@ -1,6 +1,11 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { BottomNavigation, BottomNavigationAction, Paper, styled } from "@mui/material";
+import {
+  BottomNavigation,
+  BottomNavigationAction,
+  Paper,
+  styled,
+} from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ReceiptIcon from "@mui/icons-material/Receipt";

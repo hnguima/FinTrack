@@ -132,7 +132,12 @@ function App() {
 
   // Wrapper function to trigger background sync when changing screens
   const navigateToScreen = (
-    newScreen: "dashboard" | "accounts" | "transactions" | "analytics" | "profile"
+    newScreen:
+      | "dashboard"
+      | "accounts"
+      | "transactions"
+      | "analytics"
+      | "profile"
   ) => {
     // Navigate immediately for seamless UX
     setScreen(newScreen);
@@ -409,7 +414,7 @@ function App() {
         className="App"
         sx={{
           paddingTop: `${safeAreaTop}px`, // Use padding instead of margin for proper header spacing
-          paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))', // Bottom navigation height + safe area
+          paddingBottom: "calc(80px + env(safe-area-inset-bottom, 0px))", // Bottom navigation height + safe area
           minHeight:
             "calc(100vh - env(safe-area-inset-bottom, 0px) - 64px - env(safe-area-inset-top, 0px))", // Full height
           boxSizing: "border-box", // Include padding in height calculation
