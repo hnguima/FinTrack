@@ -12,8 +12,10 @@ import PersonIcon from "@mui/icons-material/Person";
 
 interface HeaderProps {
   title?: string;
-  screen: "dashboard" | "profile";
-  setScreen: (screen: "dashboard" | "profile") => void;
+  screen: "dashboard" | "accounts" | "transactions" | "analytics" | "profile";
+  setScreen: (
+    screen: "dashboard" | "accounts" | "transactions" | "analytics" | "profile"
+  ) => void;
   user?: {
     name?: string;
     photo?: string;
@@ -69,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center" }}>
-          {(screen === "profile") && (
+          {(screen === "profile" || screen === "accounts") && (
             <IconButton
               edge="start"
               color="inherit"

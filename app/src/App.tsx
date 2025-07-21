@@ -68,21 +68,28 @@ function getUserFromStorage() {
   }
 }
 
+import AccountsScreen from "./screens/AccountsScreen";
+import TransactionScreen from "./screens/TransactionScreen";
+import SpendingAnalytics from "./components/SpendingAnalytics";
+import BottomNav from "./components/BottomNav";
+
 function App() {
   const { t } = useTranslation();
-  const [screen, setScreen] = useState<"dashboard" | "profile">(
-    "dashboard"
-  );
+  const [screen, setScreen] = useState<
+    "dashboard" | "accounts" | "transactions" | "analytics" | "profile"
+  >("dashboard");
 
   // Check if server data has been updated and sync local state
   const checkAndSyncServerUpdates = async () => {
     if (!user) return;
-    
+
     try {
       const updateStatus = await UserCacheManager.checkUserUpdateStatus();
       if (updateStatus.shouldUpdate) {
-        console.log("[FinTrack] Server data updated from another source, refreshing...");
-        
+        console.log(
+          "[FinTrack] Server data updated from another source, refreshing..."
+        );
+
         // Fetch fresh data from server and update local state
         const freshData = await UserCacheManager.getUserDataWithCache();
         if (freshData) {
@@ -99,17 +106,23 @@ function App() {
     // Only update if data actually changed to prevent unnecessary re-renders
     const currentUserStr = JSON.stringify(user);
     const freshUserStr = JSON.stringify(freshData);
-    
+
     if (currentUserStr !== freshUserStr) {
       setUser(freshData);
       localStorage.setItem("user", JSON.stringify(freshData));
-      
+
       // Update app-level preferences if they changed
       if (freshData.preferences) {
-        if (freshData.preferences.theme && freshData.preferences.theme !== themeMode) {
+        if (
+          freshData.preferences.theme &&
+          freshData.preferences.theme !== themeMode
+        ) {
           setThemeMode(freshData.preferences.theme);
         }
-        if (freshData.preferences.language && freshData.preferences.language !== language) {
+        if (
+          freshData.preferences.language &&
+          freshData.preferences.language !== language
+        ) {
           setLanguage(freshData.preferences.language);
           i18n.changeLanguage(freshData.preferences.language);
         }
@@ -118,10 +131,12 @@ function App() {
   };
 
   // Wrapper function to trigger background sync when changing screens
-  const navigateToScreen = (newScreen: "dashboard" | "profile") => {
+  const navigateToScreen = (
+    newScreen: "dashboard" | "accounts" | "transactions" | "analytics" | "profile"
+  ) => {
     // Navigate immediately for seamless UX
     setScreen(newScreen);
-    
+
     // Run sync operations in background without blocking UI
     performBackgroundSync();
   };
@@ -132,10 +147,12 @@ function App() {
       // First, sync any pending local changes to the database
       const pendingCount = BackgroundSync.getPendingUpdateCount();
       if (pendingCount > 0) {
-        console.log(`[FinTrack] Syncing ${pendingCount} pending update(s) to server...`);
+        console.log(
+          `[FinTrack] Syncing ${pendingCount} pending update(s) to server...`
+        );
         await BackgroundSync.forceSyncNow();
       }
-      
+
       // Always check for external updates (from other devices, web interface, etc.)
       // This is crucial for multi-device consistency
       await checkAndSyncServerUpdates();
@@ -219,10 +236,10 @@ function App() {
 
   const handleUserUpdate = (updatedUser: any) => {
     setUser(updatedUser);
-    
+
     // Queue the user update for background sync to database
     BackgroundSync.queueUserUpdate(updatedUser);
-    
+
     // Sync preferences if they changed
     if (updatedUser.preferences) {
       if (updatedUser.preferences.theme !== themeMode) {
@@ -344,10 +361,17 @@ function App() {
 
   const getScreenTitle = () => {
     if (screen === "dashboard") return t("title");
+    if (screen === "accounts") return t("accounts", "Accounts");
+    if (screen === "transactions") return t("transactions", "Transactions");
+    if (screen === "analytics") return t("analytics", "Analytics");
+    return t("profile", "Profile");
   };
 
   const renderScreen = () => {
     if (screen === "dashboard") return <DashboardScreen />;
+    if (screen === "accounts") return <AccountsScreen user={user} />;
+    if (screen === "transactions") return <TransactionScreen />;
+    if (screen === "analytics") return <SpendingAnalytics />;
     return (
       <UserProfileScreen
         themeMode={themeMode}
@@ -385,6 +409,7 @@ function App() {
         className="App"
         sx={{
           paddingTop: `${safeAreaTop}px`, // Use padding instead of margin for proper header spacing
+          paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))', // Bottom navigation height + safe area
           minHeight:
             "calc(100vh - env(safe-area-inset-bottom, 0px) - 64px - env(safe-area-inset-top, 0px))", // Full height
           boxSizing: "border-box", // Include padding in height calculation
@@ -392,6 +417,7 @@ function App() {
       >
         {renderScreen()}
       </Container>
+      <BottomNav screen={screen} setScreen={navigateToScreen} />
     </ThemeProvider>
   );
 }
