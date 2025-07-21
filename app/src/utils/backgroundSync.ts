@@ -22,7 +22,7 @@ export class BackgroundSync {
     };
 
     // Remove any previous unsynced updates (keep only the latest)
-    this.pendingUpdates = this.pendingUpdates.filter(u => u.synced);
+    this.pendingUpdates = this.pendingUpdates.filter((u) => u.synced);
     this.pendingUpdates.push(update);
 
     if (this.DEBUG) {
@@ -38,7 +38,7 @@ export class BackgroundSync {
       return false;
     }
 
-    const unsyncedUpdates = this.pendingUpdates.filter(u => !u.synced);
+    const unsyncedUpdates = this.pendingUpdates.filter((u) => !u.synced);
     if (unsyncedUpdates.length === 0) {
       if (this.DEBUG) {
         console.log("[BackgroundSync] No pending updates to sync");
@@ -63,13 +63,15 @@ export class BackgroundSync {
   }
 
   // Perform the actual sync operation
-  private static async performSync(unsyncedUpdates: PendingUserUpdate[]): Promise<boolean> {
+  private static async performSync(
+    unsyncedUpdates: PendingUserUpdate[]
+  ): Promise<boolean> {
     this.isCurrentlySyncing = true;
 
     try {
       // Get the most recent update
       const latestUpdate = unsyncedUpdates[unsyncedUpdates.length - 1];
-      
+
       if (this.DEBUG) {
         console.log("[BackgroundSync] Syncing user data to database...");
       }
@@ -82,7 +84,10 @@ export class BackgroundSync {
         return true;
       } else {
         if (this.DEBUG) {
-          console.warn("[BackgroundSync] ❌ Sync failed with status:", response.status);
+          console.warn(
+            "[BackgroundSync] ❌ Sync failed with status:",
+            response.status
+          );
         }
         return false;
       }
@@ -105,7 +110,7 @@ export class BackgroundSync {
     await saveUserUpdatedAt(serverTimestamp);
 
     // Mark all pending updates as synced
-    this.pendingUpdates.forEach(update => {
+    this.pendingUpdates.forEach((update) => {
       update.synced = true;
     });
 
@@ -139,19 +144,19 @@ export class BackgroundSync {
 
   // Get count of pending updates
   static getPendingUpdateCount(): number {
-    return this.pendingUpdates.filter(u => !u.synced).length;
+    return this.pendingUpdates.filter((u) => !u.synced).length;
   }
 
   // Check if there are pending updates
   static hasPendingUpdates(): boolean {
-    return this.pendingUpdates.some(u => !u.synced);
+    return this.pendingUpdates.some((u) => !u.synced);
   }
 
   // Clear all pending updates (useful for logout)
   static clearPendingUpdates() {
     this.pendingUpdates = [];
     this.isCurrentlySyncing = false;
-    
+
     if (this.DEBUG) {
       console.log("[BackgroundSync] Cleared all pending updates");
     }

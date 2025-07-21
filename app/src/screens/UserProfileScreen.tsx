@@ -101,35 +101,42 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
         // Instead of fetching fresh profile (which loses unsaved changes),
         // merge current user state with the new photo URL from upload response
         const uploadResponseData = response.data;
-        
+
         // Create updated user data by preserving local changes and adding new photo
-        const updatedUserWithPhoto = { 
+        const updatedUserWithPhoto = {
           ...user, // Start with current user (preserves unsaved changes like theme)
           ...uploadResponseData, // Add server fields (id, created_at, etc.)
           ...user, // Re-apply user data to override any server preferences with local ones
           photo: uploadResponseData.photo || uploadResponseData.photoUrl, // Use new photo from server
-          updated_at: uploadResponseData.updated_at || uploadResponseData.created_at
+          updated_at:
+            uploadResponseData.updated_at || uploadResponseData.created_at,
         };
 
         // Update cache with the merged data
         const serverTimestamp = updatedUserWithPhoto.updated_at;
-        await UserCacheManager.cacheUserData(updatedUserWithPhoto, serverTimestamp);
+        await UserCacheManager.cacheUserData(
+          updatedUserWithPhoto,
+          serverTimestamp
+        );
         await saveUserUpdatedAt(serverTimestamp);
 
         // Also ensure the photo BLOB is cached with the correct timestamp
         const newPhotoUrl = updatedUserWithPhoto.photo;
-        if (newPhotoUrl && !newPhotoUrl.startsWith('blob:')) {
+        if (newPhotoUrl && !newPhotoUrl.startsWith("blob:")) {
           // If it's a server URL, cache it as BLOB
-          await UserCacheManager.fetchAndCachePhotoBlob(newPhotoUrl, serverTimestamp);
+          await UserCacheManager.fetchAndCachePhotoBlob(
+            newPhotoUrl,
+            serverTimestamp
+          );
         }
 
         // Get cached photo BLOB to replace server URL with BLOB
         const cachedPhotoUrl = await UserCacheManager.getCachedPhotoDataUrl();
         const finalUserData = {
           ...updatedUserWithPhoto,
-          photo: cachedPhotoUrl || updatedUserWithPhoto.photo
+          photo: cachedPhotoUrl || updatedUserWithPhoto.photo,
         };
-        
+
         // Use the final data with BLOB photo
         onUserUpdate(finalUserData);
 
@@ -267,13 +274,13 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     try {
       // Merge updates with current user data
       const updatedUser = { ...user, ...updates };
-      
+
       // Update local state immediately for responsiveness
       onUserUpdate(updatedUser);
-      
+
       // Note: BackgroundSync queuing is handled by App.tsx handleUserUpdate()
       // so we don't queue here to avoid duplicates
-      
+
       // Update local storage with updated data
       localStorage.setItem("user", JSON.stringify(updatedUser));
     } catch (error) {
